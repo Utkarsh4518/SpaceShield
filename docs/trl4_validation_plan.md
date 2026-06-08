@@ -14,9 +14,10 @@ To validate our Edge-AI anomaly classification and physical-layer threat detecti
                       +─────────────────────────────────────────+
                       │          RF Shielded Enclosure          │
                       │                                         │
-+────────────────+    │  +─────────────────+                    │
-│   NavIC/SDR    │    │  │  Co-Axial RF    │                    │
-│ Signal Sim /   │───┼─►│  Attenuators &  │                    │
+                      │  +─────────────────+                    │
++────────────────+    │  │  Co-Axial RF    │                    │
+│   NavIC/SDR    │    │  │  Attenuators &  │                    │
+│ Signal Sim /   │───┼─►│  Combiner Network│                    │
 │ Spoofer Source │    │  │  Combiner Network│                    │
 +────────────────+    │  +─────────────────+                    │
                       │           │                             │
@@ -37,7 +38,7 @@ To validate our Edge-AI anomaly classification and physical-layer threat detecti
 
 ---
 
-## 2. 12-Week HIL Validation Schedule
+## 2. 12-Week HIL Validation Schedule (Phase 2)
 
 ```
 Week 1-2      Week 3-4      Week 5-6      Week 7-8      Week 9-10     Week 11-12
@@ -46,53 +47,65 @@ Week 1-2      Week 3-4      Week 5-6      Week 7-8      Week 9-10     Week 11-12
   USRP HIL      Signature     Drift         -6 dB Alert   Real-time     TRL-4 Report
 ```
 
-### Phase 1: Testbed Integration & Baseline Calibration (Weeks 1-2)
-- **Week 1: Physical Linkage & Shielding Calibration**
-  - Install the Ettus USRP B210 and connect SMA cables within the shielded Faraday enclosure.
-  - Verify baseline noise floors and measure thermal noise variance to establish the standard $\sigma^2$ baseline.
-- **Week 2: NavIC Carrier Acquisition**
-  - Stream synthesized clean NavIC L5 (1176.45 MHz) and S-band (2492.028 MHz) signals.
-  - Calibrate the IQ capture pipeline in python, checking for packet drops at a target sampling rate of $fs = 5\text{ MSPS}$.
+### Week 1: Physical Linkage & Shielding Calibration
+*   **Engineering Focus:** RF path loss calibration, Faraday cage isolation measurement, and establishing thermal noise floor baseline ($\sigma^2$).
+*   **Hardware/Software Integration:** Interconnecting Ettus USRP B210 TX/RX ports with SMA coaxial cables, attenuators (30 dB step), and combiner networks inside the shielding box. Interfacing with UHD drivers.
+*   **Success Criteria/KPIs:** Achieve $>80\text{ dB}$ signal isolation envelope inside the Faraday cage. Establish nominal thermal noise floor at $-110\text{ dBm/Hz}$ without spurious leakage.
 
-### Phase 2: RF Fingerprinting (RFF) Classifier Validation (Weeks 3-4)
-- **Week 3: Device Imperfection Profiling**
-  - Generate signals from 5 different SDR units (transmitters) to profile hardware imperfections (IQ gain imbalance, phase skew, DC leakage).
-  - Train our baseline XGBoost and complex-valued CNN models on the extracted RFF dataset.
-- **Week 4: RFF Classification Integrity Test**
-  - Validate device fingerprinting accuracy under varying SNR levels (0 dB to 20 dB).
-  - Verify that the CNN classifier meets the targeted validation threshold ($\ge 99\%$ accuracy under line-of-sight conditions).
+### Week 2: NavIC Carrier Ingestion & Streaming Optimization
+*   **Engineering Focus:** IQ stream chunking, high-throughput buffer allocation, and thread-safe streaming to prevent packet loss.
+*   **Hardware/Software Integration:** Configuring UHD source block to stream NavIC L5 (1176.45 MHz) and S-band (2492.028 MHz) at $5\text{ MSPS}$ sample rate. Tuning system socket buffers (`sysctl` network buffers) in Linux/Jetson.
+*   **Success Criteria/KPIs:** Zero overflow (`O`) or underflow (`U`) packets over a 4-hour continuous streaming run. Maintain latency baseline under $5\text{ ms}$ for IQ buffer ingestion.
 
-### Phase 3: GLR Stability Anomaly Validation (Weeks 5-6)
-- **Week 5: Drag-off Spoofing Emulation**
-  - Deploy a spoofing transmitter to generate carrier-coherent signals with a slowly drifting frequency offset (from 0.1 Hz/s up to 10 Hz/s).
-  - Measure the response of the receiver's tracking loop loop-filter outputs.
-- **Week 6: Generalized Likelihood Ratio (GLR) Tuning**
-  - Feed Doppler rate variance into the GLRT detector.
-  - Tune the detection threshold $\gamma$ to ensure a false-alarm rate $P_{\text{fa}} = 10^{-7}$ is strictly maintained, while achieving $99.5\%$ probability of detection for drag-off sweeps exceeding $1.5\text{ Hz/s}$ drift rate.
+### Week 3: RF Fingerprinting (RFF) Dataset Gathering & Modeling
+*   **Engineering Focus:** Compiling physical hardware signatures (DC offset, IQ gain imbalance, quadrature phase skew) from 5 distinct USRP/SDR units.
+*   **Hardware/Software Integration:** Running Automated Feature Extraction pipeline to collect features (estimated CFO, phase noise, imbalance parameters). Formatting dataset for training XGBoost and Complex-Valued CNN models.
+*   **Success Criteria/KPIs:** Collect $\ge 100,000$ distinct IQ bursts per SDR device. Achieve validation accuracy $\ge 95\%$ on offline training set.
 
-### Phase 4: ITU-R M.1902-2 Limit Compliance Verification (Weeks 7-8)
-- **Week 7: Noise-to-Interference Stress Tests**
-  - Introduce broadband white noise jamming. Gradually ramp up the jammer power from $I/N = -20\text{ dB}$ up to $+30\text{ dB}$.
-  - Map tracking lock loss margins.
-- **Week 8: Protection Limit Alert Verification**
-  - Verify that the SpaceShield software agent triggers a `VIOLATION` alert within $<10\text{ ms}$ of the $I/N$ ratio crossing the $-6\text{ dB}$ threshold.
-  - Ensure the alert correctly maps to spectral flatness characteristics.
+### Week 4: RFF Classifier Optimization & Hardening
+*   **Engineering Focus:** Hyperparameter tuning of RFF CNN classifier and testing model performance against low SNR environments.
+*   **Hardware/Software Integration:** Converting trained PyTorch CNN and XGBoost models to ONNX formats and optimizing execution paths using TensorRT on the host.
+*   **Success Criteria/KPIs:** Achieve CNN classification accuracy $\ge 99.0\%$ under line-of-sight conditions (SNR $\ge 15\text{ dB}$) and $\ge 98.0\%$ at low SNR levels (down to $3\text{ dB}$).
 
-### Phase 5: Real-time Edge Deployment & Latency Audits (Weeks 9-10)
-- **Week 9: NVIDIA Jetson Microservice Packaging**
-  - Containerize the `rf_threat_simulator` into a Docker microservice optimized for the NVIDIA Jetson Orin Nano edge platform using TensorRT.
-  - Profile the CPU/GPU memory footprint and power consumption.
-- **Week 10: Real-time Ingestion Latency Benchmarks**
-  - Run continuous, real-time loop tests over 24-hour periods.
-  - Benchmark inline inspection latency: target average must remain sub-millisecond (e.g., $<0.8\text{ ms}$ processing time per IQ frame batch).
+### Week 5: Coherent Spoofing & Doppler Drag-off Emulation
+*   **Engineering Focus:** Emulating dynamic multi-generator spoofing scenarios (Doppler drag-off, power advantage, code-phase alignment).
+*   **Hardware/Software Integration:** Integrating second USRP transmitter configured as a spoofer with tracking loop emulation software (GNU Radio NavIC tracking blocks).
+*   **Success Criteria/KPIs:** Simulate successful pseudorange rate drag-off sweeps drifting from $0.1\text{ Hz/s}$ to $10\text{ Hz/s}$ without triggering standard receiver tracking lock loss initially.
 
-### Phase 6: Compliance Logs & Audit Signoff (Weeks 11-12)
-- **Week 11: CERT-In compliance Integration & Forensics**
-  - Integrate the WORM security log architecture. Perform vulnerability tests trying to overwrite the `spaceshield_180day_security.log`.
-  - Validate that the 6-hour reporting JSON payload is correctly pushed to local directories upon alert triggers.
-- **Week 12: Final TRL 4 Documentation & iDEX Review**
-  - Compile the HIL test outputs, performance graphs, and compliance logs.
-  - Submit the validation dossier to Indian defense auditing bodies for official iDEX TRL 4 certification.
+### Week 6: Generalized Likelihood Ratio (GLR) Integration & Tuning
+*   **Engineering Focus:** Tuning the GLRT anomaly detection statistic for NavIC GEO/GSO carrier stability.
+*   **Hardware/Software Integration:** Interfacing tracking loop loop-filter frequency output with the GLR calculation block in Python.
+*   **Success Criteria/KPIs:** Establish detection threshold $\gamma$ keeping False Alarm Rate $P_{fa} \le 10^{-7}$ while maintaining a Probability of Detection $P_d \ge 99.5\%$ for drag-off drift rates exceeding $1.5\text{ Hz/s}$.
+
+### Week 7: ITU-R M.1902-2 Interference Mapping
+*   **Engineering Focus:** High-power broadband white noise jamming and sweep jamming impact assessment on receiver tracking loops.
+*   **Hardware/Software Integration:** Configuring RF combiner network to overlay broadband noise with legitimate NavIC signals. Monitoring carrier-to-noise ratio ($C/N_0$) drop-off in tracking blocks.
+*   **Success Criteria/KPIs:** Map the exact tracking lock threshold drop-off curves from $I/N = -20\text{ dB}$ to $+30\text{ dB}$. Define clear boundaries for jamming state transitions.
+
+### Week 8: Protection Limit Alerts & Feature Correlation
+*   **Engineering Focus:** Optimizing response time for ITU-R alert triggers and correlating interference power with spectral flatness metrics (Wiener Entropy).
+*   **Hardware/Software Integration:** Interfacing the Feature Extraction engine with the Threat Decision Matrix in `rf_threat_simulator.py`.
+*   **Success Criteria/KPIs:** Time elapsed between $I/N$ crossing the $-6\text{ dB}$ threshold and warning alert generation must be under $10\text{ ms}$. Ensure spectral flatness drops below $0.5$ in presence of narrowband jamming.
+
+### Week 9: Edge Microservice Packaging & Containerization
+*   **Engineering Focus:** Code footprint reduction, containerization, and configuring system resource quotas.
+*   **Hardware/Software Integration:** Containerizing SpaceShield Edge agent into a rootless Docker microservice. Optimizing ONNX runtime engine path on the NVIDIA Jetson Orin Nano GPU using CUDA/TensorRT execution providers.
+*   **Success Criteria/KPIs:** Package container size kept under $1.2\text{ GB}$. Limit RAM utilization to $<2.0\text{ GB}$ and CPU load to $<30\%$ of available NVIDIA Orin cores.
+
+### Week 10: Edge Latency Benchmarking & Stress Testing
+*   **Engineering Focus:** Inline processing latency optimization, memory leak testing, and long-term stability profiling.
+*   **Hardware/Software Integration:** Running continuous Loopback Hardware-in-the-Loop tests over 48 hours on Jetson Orin Nano.
+*   **Success Criteria/KPIs:** Average inline inspection latency (IQ ingestion to threat verdict output) must remain under $1.0\text{ ms}$ per 1024-sample batch. No memory leaks detected over 48 hours of continuous operation.
+
+### Week 11: CERT-In Compliance Log Auditing
+*   **Engineering Focus:** Log security auditing, WORM state verification, and forensic hash chain integrity validation.
+*   **Hardware/Software Integration:** Running vulnerability script tests trying to bypass WORM locks. Executing `verify_log_integrity.py` on logs generated during active stress testing.
+*   **Success Criteria/KPIs:** Validate that all incident logs comply with the 6-hour reporting window. Enforce `chmod 0444` successfully, preventing log mutation or line-insertion attacks.
+
+### Week 12: Final iDEX TRL 4 Review & Sign-off
+*   **Engineering Focus:** Dossier compilation, verification results packaging, and certification demonstration preparation.
+*   **Hardware/Software Integration:** Packaging system metrics, logs, and screenshots into an official auditing package. Preparing live lab demonstration scripts.
+*   **Success Criteria/KPIs:** Complete compilation of TRL 4 validation report. Zero errors returned by audit test scripts. Secure approval dossier signoff for the iDEX delegation review.
 
 ---
 
