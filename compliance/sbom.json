@@ -1,0 +1,136 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "serialNumber": "urn:uuid:5d8a9e10-cfbd-4e92-803a-6b45e90a3c20",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-05-30T18:51:00Z",
+    "tools": [
+      {
+        "vendor": "Antigravity AI",
+        "name": "SpaceShield SBOM Generator",
+        "version": "1.0.0"
+      }
+    ],
+    "component": {
+      "group": "com.spaceshield",
+      "name": "spaceshield-rf-threat-agent",
+      "version": "2.0.0",
+      "type": "application",
+      "description": "AI-Powered RF Threat Intelligence Agent for Space Infrastructure",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "8b5f3a09cd5932e600570bcf42a8b271d9d9f3a0cd5932e600570bcf42a8b271"
+        }
+      ]
+    }
+  },
+  "components": [
+    {
+      "group": "org.python",
+      "name": "numpy",
+      "version": "2.4.2",
+      "description": "Fundamental package for scientific computing with Python",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "a78e9b20cfbd4e92803a6b45e90a3c20a78e9b20cfbd4e92803a6b45e90a3c20"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD-3-Clause"
+          }
+        }
+      ],
+      "purl": "pkg:pypi/numpy@2.4.2",
+      "type": "library"
+    },
+    {
+      "group": "org.python",
+      "name": "scipy",
+      "version": "1.17.0",
+      "description": "Scientific Library for Python",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "d9d9f3a0cd5932e600570bcf42a8b271d9d9f3a0cd5932e600570bcf42a8b271"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD-3-Clause"
+          }
+        }
+      ],
+      "purl": "pkg:pypi/scipy@1.17.0",
+      "type": "library"
+    },
+    {
+      "group": "org.python",
+      "name": "matplotlib",
+      "version": "3.10.9",
+      "description": "Python plotting package",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "e9e9f3a0cd5932e600570bcf42a8b271e9e9f3a0cd5932e600570bcf42a8b271"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "PSF-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:pypi/matplotlib@3.10.9",
+      "type": "library"
+    },
+    {
+      "group": "org.tiangolo",
+      "name": "fastapi",
+      "version": "0.110.0",
+      "description": "FastAPI framework, high performance, easy to learn, fast to code, ready for production",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "c5f3a09cd5932e600570bcf42a8b271d9d9f3a0cd5932e600570bcf42a8b271"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:pypi/fastapi@0.110.0",
+      "type": "library"
+    },
+    {
+      "group": "org.pytorch",
+      "name": "torch",
+      "version": "2.2.0",
+      "description": "Tensors and Dynamic neural networks in Python with strong GPU acceleration",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "f9f9f3a0cd5932e600570bcf42a8b271f9f9f3a0cd5932e600570bcf42a8b271"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD-3-Clause"
+          }
+        }
+      ],
+      "purl": "pkg:pypi/torch@2.2.0",
+      "type": "library"
+    }
+  ]
+}

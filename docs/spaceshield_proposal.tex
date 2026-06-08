@@ -1,0 +1,72 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{tcolorbox}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,      
+    urlcolor=cyan,
+    pdftitle={SpaceShield Technical Proposal},
+    pdfpagemode=FullScreen,
+}
+
+\title{\textbf{SpaceShield: Sovereign Physical-Layer Security for Satellite Infrastructure}}
+\author{\textbf{Antigravity AI}}
+\date{May 2026}
+
+\begin{document}
+
+\maketitle
+
+\section*{Executive Summary}
+The virtualization and digitization of ground-station architectures have introduced significant vulnerabilities at the terrestrial-RF frontier. Traditional cybersecurity frameworks operate primarily at the network and operating system layers, leaving raw radio frequency (RF) ingestion pipelines exposed to physical-layer manipulation. SpaceShield provides an inline, software-defined threat intelligence platform that intercepts and validates digitized In-phase and Quadrature (I/Q) streams at the receiver frontend. 
+
+As national regulatory policies increasingly favor the adoption of NavIC-compatible infrastructure across strategic, transport, and defense platforms, the demand for localized, high-reliability signal verification is expanding rapidly. SpaceShield establishes a sovereign cyber-RF defense shield, protecting critical ground networks without requiring modifications to orbital payloads.
+
+\section*{Technical Architecture}
+SpaceShield's detection engine is deployed as a containerized edge agent running inline alongside Software-Defined Radios (SDRs). It extracts physical-layer telemetry and executes two core analytical processes:
+
+\begin{tcolorbox}[colback=blue!5!white,colframe=blue!75!black,title=\textbf{Core Technical Innovations}]
+\begin{itemize}
+    \item \textbf{Generalized Likelihood Ratio (GLR) Anomaly Detector}: Evaluates the stability of NavIC's geostationary (GEO) and geosynchronous (GSO) carrier phase rate dynamics. Any deviation in pseudorange rate or Doppler shift is statistically tested against nominal orbits, triggering alerts at an engineering target of $P_{fa} = 10^{-7}$ to eliminate operational false alarms.
+    \item \textbf{RF Fingerprinting (RFF) Classifier}: Profiles transceivers based on physical hardware imperfections such as I/Q amplitude/phase imbalance, Carrier Frequency Offset (CFO) drift, and local oscillator phase noise. Legacy signals are validated against benchmark datasets, with hardware authorization performance reported per threat class using deep complex-valued convolutional classifiers.
+\end{itemize}
+\end{tcolorbox}
+
+Mathematically, the GLR detection statistic $\Lambda_k$ over a sliding analysis window of length $N$ is formulated as:
+\begin{equation}
+\Lambda_k = \frac{1}{\sigma^2} \sum_{i=k-N+1}^{k} (\mathbf{y}_i - \mathbf{x}_i)^T (\mathbf{y}_i - \mathbf{x}_i)
+\end{equation}
+where $\mathbf{y}_i$ represents the observed vector of signal parameters, $\mathbf{x}_i$ is the nominal orbital baseline trajectory, and $\sigma^2$ is the calibrated thermal noise variance under the null hypothesis $\mathcal{H}_0$.
+
+\section*{Regulatory Alignment}
+SpaceShield is architected to align with international telecommunications and national cybersecurity standards:
+\begin{itemize}
+    \item \textbf{ITU-R M.1902-2}: Enforces interference protection limits in the 1215--1300 MHz band. SpaceShield monitors the Interference-to-Noise ($I/N$) ratio, raising compliance warnings when levels violate the recommended $-6\text{ dB}$ limit to preserve carrier tracking loop integrity.
+    \item \textbf{CERT-In Space Cyber Security Framework (February 2026)}: Mandates automated log archiving for a rolling 180-day forensic window and compliance reporting of critical signal anomalies within a 6-hour window. SpaceShield automates these requirements via write-locked, cryptographic hash-chained security logs.
+\end{itemize}
+
+\section*{Revenue Model}
+Our commercialization strategy leverage a high-margin business-to-business (B2B) and business-to-government (B2G) software licensing model, summarized in Table 1.
+
+\begin{table}[h]
+\centering
+\caption{SpaceShield Revenue Stream Framework}
+\label{tab:revenue}
+\begin{tabular}{lll}
+\toprule
+\textbf{Revenue Stream} & \textbf{Model Type} & \textbf{Billing Unit} \\
+\midrule
+SaaS Subscriptions & Recurring & Monthly subscription per monitored satellite transponder \\
+Annual Software Licenses & Recurring & Annual node license for Edge-AI SDR agent deployment \\
+Project-based Fees & Consulting & Flat-rate space-specific security audit (VAPT) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\end{document}

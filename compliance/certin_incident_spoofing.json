@@ -1,0 +1,40 @@
+{
+    "timestamp": "2026-05-30T18:52:19Z",
+    "guideline_compliance": "CERT-In/SIA-India Space Cyber Security Framework (Feb 2026)",
+    "facility_id": "IN-GS-KA-01",
+    "node_type": "NavIC L5 / S-band SDR Receiver Agent",
+    "monitoring_scenario": "SPOOFING",
+    "itu_compliance": "VIOLATION",
+    "glr_status": "ALERT",
+    "incident_details": {
+        "threat_detected": true,
+        "threat_category": "SPOOFING",
+        "severity_score_pct": 99.2,
+        "telemetry": {
+            "interference_to_noise_db": 9.01,
+            "spectral_flatness": 0.1101,
+            "glr_path_statistic": 18.5,
+            "rff_fingerprint": {
+                "cfo": 148.5,
+                "phase_noise": 0.14,
+                "iq_amp_imbalance": 0.78,
+                "iq_phase_imbalance": 4.3
+            }
+        },
+        "root_causes": [
+            "ITU-R M.1902-2 Limit Violated: I/N ratio (9.0 dB) exceeds -6 dB standard.",
+            "GLR Path Anomaly Triggered: Statistic (18.5) exceeds threshold (9.8).",
+            "RFF Classification: CNN (Acc: 99.9%) flags unauthorized SDR device footprint.",
+            "RFF Metrics: CFO=148.5Hz, I/Q Imbal=0.78dB, Phase Noise=0.14rad.",
+            "Subtle pseudorange rate drag-off detected in GSO reference loop."
+        ]
+    },
+    "compliance_action": {
+        "cert_in_6h_report_required": true,
+        "cert_in_reporting_deadline": "6 Hours from Detection",
+        "log_retention_period": "180 Days Mandatory",
+        "security_certification": "ISO/IEC 27001 & FIPS 140-3 Hardware Compliant"
+    },
+    "prev_hash": "781dceb76b649ef9a8a65169c31ac291a740799c688597849d04fae0ff0b8f5c",
+    "hash": "63bde35281d637bf796a9de2f7ac565f9d899d124de4b046202f0e9bf6c019f2"
+}

@@ -1,0 +1,37 @@
+{
+    "timestamp": "2026-05-30T18:52:19Z",
+    "guideline_compliance": "CERT-In/SIA-India Space Cyber Security Framework (Feb 2026)",
+    "facility_id": "IN-GS-KA-01",
+    "node_type": "NavIC L5 / S-band SDR Receiver Agent",
+    "monitoring_scenario": "JAMMING",
+    "itu_compliance": "VIOLATION",
+    "glr_status": "NOMINAL",
+    "incident_details": {
+        "threat_detected": true,
+        "threat_category": "JAMMING",
+        "severity_score_pct": 100.0,
+        "telemetry": {
+            "interference_to_noise_db": 19.03,
+            "spectral_flatness": 0.9788,
+            "glr_path_statistic": 0.0,
+            "rff_fingerprint": {
+                "cfo": 0.0,
+                "phase_noise": 1.0,
+                "iq_amp_imbalance": 0.0,
+                "iq_phase_imbalance": 0.0
+            }
+        },
+        "root_causes": [
+            "ITU-R M.1902-2 Limit Violated: I/N ratio (19.0 dB) exceeds -6 dB standard.",
+            "Broadband RF energy blocking legitimate GPS/NavIC channels."
+        ]
+    },
+    "compliance_action": {
+        "cert_in_6h_report_required": true,
+        "cert_in_reporting_deadline": "6 Hours from Detection",
+        "log_retention_period": "180 Days Mandatory",
+        "security_certification": "ISO/IEC 27001 & FIPS 140-3 Hardware Compliant"
+    },
+    "prev_hash": "0e9d965582c99c3159955fffabcd3650fd54a12dc82002bff0844329825d1754",
+    "hash": "781dceb76b649ef9a8a65169c31ac291a740799c688597849d04fae0ff0b8f5c"
+}
