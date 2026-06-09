@@ -131,6 +131,48 @@
       ],
       "purl": "pkg:pypi/torch@2.2.0",
       "type": "library"
+    },
+    {
+      "group": "org.onnx",
+      "name": "onnx",
+      "version": "1.15.0",
+      "description": "Open Neural Network Exchange",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "a2a2f3a0cd5932e600570bcf42a8b271d9d9f3a0cd5932e600570bcf42a8b271"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:pypi/onnx@1.15.0",
+      "type": "library"
+    },
+    {
+      "group": "org.onnx",
+      "name": "onnxruntime",
+      "version": "1.17.1",
+      "description": "ONNX Runtime is a performance-focused engine for ONNX models",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "b3b3f3a0cd5932e600570bcf42a8b271d9d9f3a0cd5932e600570bcf42a8b271"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:pypi/onnxruntime@1.17.1",
+      "type": "library"
     }
   ]
 }

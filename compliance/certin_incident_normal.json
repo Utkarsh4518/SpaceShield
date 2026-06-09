@@ -1,36 +1,36 @@
 {
-    "timestamp": "2026-05-30T18:52:18Z",
+    "timestamp": "2026-06-09T12:19:46Z",
     "guideline_compliance": "CERT-In/SIA-India Space Cyber Security Framework (Feb 2026)",
     "facility_id": "IN-GS-KA-01",
     "node_type": "NavIC L5 / S-band SDR Receiver Agent",
     "monitoring_scenario": "NORMAL",
-    "itu_compliance": "COMPLIANT",
-    "glr_status": "NOMINAL",
+    "itu_compliance": "VIOLATION",
+    "glr_status": "ALERT",
     "incident_details": {
-        "threat_detected": false,
-        "threat_category": "NORMAL",
-        "severity_score_pct": 0.0,
+        "threat_detected": true,
+        "threat_category": "SPOOFING",
+        "severity_score_pct": 99.1,
         "telemetry": {
-            "interference_to_noise_db": -12.5,
-            "spectral_flatness": 0.303,
-            "glr_path_statistic": 1.1,
+            "interference_to_noise_db": 11.07,
+            "spectral_flatness": 0.9892,
+            "glr_path_statistic": 124.56,
             "rff_fingerprint": {
-                "cfo": 4.8,
-                "phase_noise": 0.02,
-                "iq_amp_imbalance": 0.06,
-                "iq_phase_imbalance": 0.4
+                "cfo": -1657.5677490234375,
+                "phase_noise": 6.426712078963475,
+                "iq_amp_imbalance": -1.2518728971481323,
+                "iq_phase_imbalance": 31.651023864746094
             }
         },
         "root_causes": [
-            "All signals validated. Legitimate satellite hardware footprint authorized."
+            "Spatial Array HIL: Sphericity Alert=True, METR=0.7662"
         ]
     },
     "compliance_action": {
-        "cert_in_6h_report_required": false,
+        "cert_in_6h_report_required": true,
         "cert_in_reporting_deadline": "6 Hours from Detection",
         "log_retention_period": "180 Days Mandatory",
         "security_certification": "ISO/IEC 27001 & FIPS 140-3 Hardware Compliant"
     },
-    "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
-    "hash": "0e9d965582c99c3159955fffabcd3650fd54a12dc82002bff0844329825d1754"
+    "prev_hash": "a454b3ff98be4dac820580bdee5516415fc92f72e6f387a2832e180e96ee9a72",
+    "hash": "c6129fe8d055ad7a1690a9b399786a45d0da19fe56cc24235f9ca539c9a1d878"
 }

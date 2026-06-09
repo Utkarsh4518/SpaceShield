@@ -1,29 +1,28 @@
 {
-    "timestamp": "2026-05-30T18:52:19Z",
+    "timestamp": "2026-06-09T12:23:20Z",
     "guideline_compliance": "CERT-In/SIA-India Space Cyber Security Framework (Feb 2026)",
     "facility_id": "IN-GS-KA-01",
     "node_type": "NavIC L5 / S-band SDR Receiver Agent",
     "monitoring_scenario": "JAMMING",
     "itu_compliance": "VIOLATION",
-    "glr_status": "NOMINAL",
+    "glr_status": "ALERT",
     "incident_details": {
         "threat_detected": true,
         "threat_category": "JAMMING",
-        "severity_score_pct": 100.0,
+        "severity_score_pct": 95.0,
         "telemetry": {
-            "interference_to_noise_db": 19.03,
-            "spectral_flatness": 0.9788,
-            "glr_path_statistic": 0.0,
+            "interference_to_noise_db": 22.04,
+            "spectral_flatness": 0.9893,
+            "glr_path_statistic": 736.84,
             "rff_fingerprint": {
-                "cfo": 0.0,
-                "phase_noise": 1.0,
-                "iq_amp_imbalance": 0.0,
-                "iq_phase_imbalance": 0.0
+                "cfo": 829018.125,
+                "phase_noise": 38.564703570947344,
+                "iq_amp_imbalance": -0.005369891878217459,
+                "iq_phase_imbalance": -0.9715770483016968
             }
         },
         "root_causes": [
-            "ITU-R M.1902-2 Limit Violated: I/N ratio (19.0 dB) exceeds -6 dB standard.",
-            "Broadband RF energy blocking legitimate GPS/NavIC channels."
+            "Spatial Array HIL: Sphericity Alert=True, METR=0.9970"
         ]
     },
     "compliance_action": {
@@ -32,6 +31,6 @@
         "log_retention_period": "180 Days Mandatory",
         "security_certification": "ISO/IEC 27001 & FIPS 140-3 Hardware Compliant"
     },
-    "prev_hash": "0e9d965582c99c3159955fffabcd3650fd54a12dc82002bff0844329825d1754",
-    "hash": "781dceb76b649ef9a8a65169c31ac291a740799c688597849d04fae0ff0b8f5c"
+    "prev_hash": "8250674d97b50d375bdfeba309154c76fabca9c4adb0381e729bdd904c4522db",
+    "hash": "5a1d051737fe5af9a275a4f0728f151f906d12970d47800dc57755851ecc726b"
 }
