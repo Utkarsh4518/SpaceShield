@@ -19,6 +19,20 @@ import time
 import queue
 import threading
 import numpy as np
+import ctypes
+
+def enable_ansi_support():
+    """Enables Virtual Console/ANSI support on Windows systems."""
+    if os.name == 'nt':
+        try:
+            kernel32 = ctypes.windll.kernel32
+            h_stdout = kernel32.GetStdHandle(-11) # STD_OUTPUT_HANDLE
+            mode = ctypes.c_ulong()
+            if kernel32.GetConsoleMode(h_stdout, ctypes.byref(mode)):
+                mode.value |= 4 # ENABLE_VIRTUAL_TERMINAL_PROCESSING
+                kernel32.SetConsoleMode(h_stdout, mode)
+        except Exception:
+            pass
 
 # Resolve parent path imports
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -28,12 +42,14 @@ try:
     from glr_detector import GLRDetector, TrackingLoopObserver
     from spatial_glrt_detector import SpatialGLRTDetector
     from rf_threat_simulator import write_certin_compliance_log
+    from edge_inference_engine import EdgeInferenceEngine
+    from array_calibration_engine import ArrayCalibrationEngine
 except ImportError as e:
     print(f"[-] Missing core dependency imports: {e}")
     sys.exit(1)
 
 class SpatialHardwareHarness:
-    def __init__(self, duration_sec=30, fs=2e6, chunk_size=8192, num_channels=4):
+    def __init__(self, duration_sec=30, fs=2e6, chunk_size=8192, num_channels=4, playback_file=None, playback_sample_type='float32', playback_endianness='little'):
         """
         Initializes the spatial concurrency HIL harness.
         
@@ -49,6 +65,10 @@ class SpatialHardwareHarness:
         self.M = num_channels
         self.N = 50  # Spatiotemporal observation temporal samples
         self.running = False
+        
+        self.playback_file = playback_file
+        self.playback_sample_type = playback_sample_type
+        self.playback_endianness = playback_endianness
         
         # Thread-safe queues
         self.iq_queue = queue.Queue(maxsize=1000)
@@ -75,8 +95,20 @@ class SpatialHardwareHarness:
         self.last_sphericity_stat = 0.0
         self.last_metr = 0.25
         self.last_lambda_max = 1.0
+        self.last_verdict = "NORMAL"
+        self.last_cfo = 0.0
         self.latency_records = []
+        self.inference_latencies = []
         self.last_log_time = 0.0  # Thread-safe global log throttling register
+        enable_ansi_support()
+        
+        # Pre-compiled production inference engine
+        self.engine = EdgeInferenceEngine()
+        self.engine.initialize_engine()
+        
+        # Calibration Engine and Thread-Safe Mutex Lock
+        self.calibration_engine = ArrayCalibrationEngine(num_channels=self.M, chunk_size=self.chunk_size)
+        self.calibration_lock = threading.Lock()
         
         # Pre-allocated memory pool to eliminate garbage collection latency
         self.pool_size = 1050
@@ -99,6 +131,19 @@ class SpatialHardwareHarness:
 
     def sample_producer(self):
         """Simulates phase-coherent synchronized multi-antenna streaming (M, 8192) in real-time."""
+        if self.playback_file:
+            from binary_file_player import BinaryFilePlayer
+            player = BinaryFilePlayer(
+                file_path=self.playback_file,
+                fs=self.fs,
+                num_channels=self.M,
+                sample_type=self.playback_sample_type,
+                endianness=self.playback_endianness,
+                chunk_size=self.chunk_size
+            )
+            player.stream_to_harness(self)
+            return
+
         start_time = time.time()
         t_step = self.chunk_size / self.fs  # ~4.096 ms
         next_time = start_time
@@ -188,6 +233,9 @@ class SpatialHardwareHarness:
         local_detector.gamma = 50.17  # Override threshold to optimized value
         local_extractor = RFFFeatureExtractor(self.fs)
         
+        # Thread-local calibration output buffer to avoid dynamic allocation overhead
+        calibrated_packet = np.zeros((self.M, self.chunk_size), dtype=np.complex64)
+        
         while self.running or not self.iq_queue.empty():
             try:
                 try:
@@ -198,7 +246,16 @@ class SpatialHardwareHarness:
                 t_start = time.perf_counter()
                 
                 try:
-                    # 1. Spatiotemporal Snapshot Extraction (consecutive temporal windows of size N=50)
+                    # 0. Blind Phase and Gain Calibration Execution
+                    if not self.calibration_engine.calibrated:
+                        with self.calibration_lock:
+                            if not self.calibration_engine.calibrated:
+                                self.calibration_engine.calibrate(iq_packet)
+                                
+                    # 1. Apply phase/gain equalization into pre-allocated buffer
+                    self.calibration_engine.equalize(iq_packet, calibrated_packet)
+                    
+                    # 2. Spatiotemporal Snapshot Extraction (consecutive temporal windows of size N=50)
                     sphericity_alert = False
                     metr_breach = False
                     max_sphericity = 0.0
@@ -208,7 +265,7 @@ class SpatialHardwareHarness:
                     num_snapshots = self.chunk_size // self.N
                     for idx in range(num_snapshots):
                         start_idx = idx * self.N
-                        Y_k = iq_packet[:, start_idx : start_idx + self.N]
+                        Y_k = calibrated_packet[:, start_idx : start_idx + self.N]
                         
                         # Evaluate spatiotemporal GLRT
                         spatial_res = local_detector.evaluate(Y_k)
@@ -229,15 +286,9 @@ class SpatialHardwareHarness:
                         if metr > 0.5:
                             metr_breach = True
                             
-                    # Update live dashboard telemetry registers atomically
-                    with self.metrics_lock:
-                        self.last_sphericity_stat = max_sphericity
-                        self.last_metr = max_metr
-                        self.last_lambda_max = max_lambda_max
-                    
                     h1_triggered = sphericity_alert or metr_breach
                     
-                    # 2. Hierarchical Spatial Fast-Path Cascade
+                    # 3. Hierarchical Spatial Fast-Path Cascade
                     if not h1_triggered:
                         # Fast Path (H0): flag safe and bypass RFF Features extraction
                         with self.metrics_lock:
@@ -250,7 +301,7 @@ class SpatialHardwareHarness:
                         beta = 0.99
                     else:
                         # Slow Path (H1): execute computationally heavy RFF features extraction
-                        ch0_data = iq_packet[0, :]
+                        ch0_data = calibrated_packet[0, :]
                         features = local_extractor.extract(ch0_data)
                         
                         total_power = np.mean(np.abs(ch0_data)**2)
@@ -264,40 +315,59 @@ class SpatialHardwareHarness:
                         rff_iq_phase = features["iq_phase_imbalance_deg"]
                         spectral_flatness = features["spectral_flatness"]
                         
-                    # 3. Formulate Threat Verdict
-                    verdict = "NORMAL"
+                    # 4. Formulate Threat Verdict using Edge Inference Engine
                     noise_power = 0.05
-                    total_ch0_power = np.mean(np.abs(iq_packet[0, :])**2)
+                    total_ch0_power = np.mean(np.abs(calibrated_packet[0, :])**2)
                     
                     if scenario == "jamming":
                         in_ratio_db = 10 * np.log10(8.0 / noise_power)
-                        if in_ratio_db > 10.0:
-                            verdict = "JAMMING"
                     elif scenario == "spoofing" or h1_triggered:
                         in_ratio_db = 10 * np.log10(0.8**2 / noise_power)
-                        verdict = "SPOOFING"
                     else:
                         in_ratio_db = -12.5
                         
-                    threat_score = 99.1 if verdict == "SPOOFING" else (95.0 if verdict == "JAMMING" else 10.0 + in_ratio_db)
+                    # Pack features into RF Fingerprinting dictionary for the inference engine
+                    prominence = features["spectral_peak_prominence_db"] if (h1_triggered and 'features' in locals() and features) else 41.5
+                    rf_fingerprint_dict = {
+                        "cfo_hz": rff_cfo,
+                        "phase_noise_std_rad": rff_phase_noise,
+                        "iq_amp_imbalance_db": rff_iq_amp,
+                        "iq_phase_imbalance_deg": rff_iq_phase,
+                        "spectral_flatness": spectral_flatness,
+                        "spectral_peak_prominence_db": prominence
+                    }
+                    
+                    verdict, probability, metrics = self.engine.classify(rf_fingerprint_dict)
+                    threat_score = probability * 100.0
+                    
+                    # Update live dashboard telemetry registers atomically
+                    with self.metrics_lock:
+                        self.last_sphericity_stat = max_sphericity
+                        self.last_metr = max_metr
+                        self.last_lambda_max = max_lambda_max
+                        self.last_verdict = verdict
+                        self.last_cfo = rff_cfo
                     
                     classification_result = {
                         "verdict": verdict,
                         "threat_score": threat_score,
                         "itu_compliance": "VIOLATION" if verdict != "NORMAL" else "COMPLIANT",
                         "glr_alert": h1_triggered,
-                        "indicators": [f"Spatial Array HIL: Sphericity Alert={sphericity_alert}, METR={max_metr:.4f}"]
+                        "indicators": [
+                            f"Spatial Array HIL: Sphericity Alert={sphericity_alert}, METR={max_metr:.4f}",
+                            f"Edge-AI: Latency={metrics['inference_latency_us']:.1f} us, Provider={metrics['provider']}"
+                        ]
                     }
                     
                     sim_features = {
                         "rms_power": float(np.sqrt(total_ch0_power)),
                         "rms_power_db": float(10 * np.log10(total_ch0_power + 1e-12)),
-                        "papr_db": float(10 * np.log10(np.max(np.abs(iq_packet[0, :])**2) / (total_ch0_power + 1e-9))),
+                        "papr_db": float(10 * np.log10(np.max(np.abs(calibrated_packet[0, :])**2) / (total_ch0_power + 1e-9))),
                         "in_ratio_db": float(in_ratio_db),
                         "spectral_flatness": float(spectral_flatness),
                         "glr_statistic": float(max_sphericity),
                         "glr_threshold": float(local_detector.gamma),
-                        "doppler_variance": float(np.var(iq_packet[0, :].real)),
+                        "doppler_variance": float(np.var(calibrated_packet[0, :].real)),
                         "beta": float(beta),
                         "rff": {
                             "cfo": rff_cfo,
@@ -334,6 +404,9 @@ class SpatialHardwareHarness:
                         self.latency_records.append(latency_ms)
                         if len(self.latency_records) > 1000:
                             self.latency_records.pop(0)
+                        self.inference_latencies.append(metrics["inference_latency_us"])
+                        if len(self.inference_latencies) > 1000:
+                            self.inference_latencies.pop(0)
                             
                     with self.metrics_lock:
                         self.processed_blocks += 1
@@ -346,13 +419,18 @@ class SpatialHardwareHarness:
                 print(f"[!] Error in processing thread {worker_id}: {e}")
 
     def display_loop(self):
-        """Displays real-time spatial array telemetry instrumentation panel."""
+        """Displays real-time spatial array telemetry HUD instrumentation panel."""
+        # Initial clear screen to initialize drawing area
+        sys.stdout.write("\033[2J\033[H")
+        sys.stdout.flush()
+        
         while self.running:
-            time.sleep(1.0)
+            time.sleep(0.1) # 100ms refresh rate
             
             with self.latency_lock:
                 avg_latency = np.mean(self.latency_records) if self.latency_records else 0.0
                 last_latency = self.latency_records[-1] if self.latency_records else 0.0
+                avg_infer = np.mean(self.inference_latencies) if self.inference_latencies else 0.0
                 
             with self.metrics_lock:
                 proc = self.processed_blocks
@@ -362,28 +440,81 @@ class SpatialHardwareHarness:
                 sphericity = self.last_sphericity_stat
                 metr = self.last_metr
                 lambda_max = self.last_lambda_max
+                verdict = getattr(self, 'last_verdict', 'NORMAL')
+                last_cfo = getattr(self, 'last_cfo', 0.0)
                 
             queue_pct = (self.iq_queue.qsize() / self.iq_queue.maxsize) * 100.0
             
+            # Write dynamic container health parameters for Docker HEALTHCHECK
+            try:
+                import json
+                health_data = {
+                    "timestamp": time.time(),
+                    "processed_blocks": proc,
+                    "dropped_blocks": drop,
+                    "queue_size": self.iq_queue.qsize(),
+                    "queue_max": self.iq_queue.maxsize,
+                    "num_workers": self.num_workers
+                }
+                status_path = "/tmp/spaceshield_status.json"
+                if os.name == 'nt':
+                    status_path = os.path.join(os.environ.get("TEMP", "C:\\temp"), "spaceshield_status.json")
+                    os.makedirs(os.path.dirname(status_path), exist_ok=True)
+                with open(status_path, "w") as hf:
+                    json.dump(health_data, hf)
+            except Exception:
+                pass
+            
+            # Formulate threat status box
+            if verdict == "SPOOFING":
+                status_box = f"\033[1;41;37m[ CRITICAL ALERT: SPOOFING DETECTED ]\033[0m"
+            elif verdict == "JAMMING":
+                status_box = f"\033[1;33;41m[ CRITICAL ALERT: JAMMING DETECTED ]\033[0m"
+            else:
+                status_box = f"\033[1;32m[ STATUS: NORMAL - ALL SIGNALS COMPLIANT ]\033[0m"
+                
+            # Dropped blocks color
+            drop_color = "\033[32m" if drop == 0 else "\033[31m"
+            
             with self.print_lock:
-                os.system('cls' if os.name == 'nt' else 'clear')
-                print("=" * 80)
-                print("         SPACESHIELD CONCURRENT SPATIOTEMPORAL ARRAY HIL HARNESS         ")
-                print("=" * 80)
-                print(f"  Active CPU Workers:         {self.num_workers:<3} | DSP Ingestion Queue: {queue_pct:.1f}%")
-                print(f"  Active Channels (M):        {self.M:<3} | Temporal Window (N):  {self.N}")
-                print(f"  Current Frame Delay:        {last_latency:.2f} ms | Mean Processing Latency:     {avg_latency:.2f} ms")
-                print("-" * 80)
-                print(f"  TOTAL PROCESSED BLOCKS:     {proc:<6} | TOTAL DROPPED BLOCKS:    {drop:<6}")
-                print(f"  ALERTS FLAGGED:             {alerts:<6} | ADAPTIVE FAST-PATH HITS: {fast_hits:<6}")
-                print("-" * 80)
-                print(f"  [Spatial Array Telemetry]")
-                print(f"    - Sphericity LLR Statistic: {sphericity:.4f} (Threshold: {self.spatial_detector.gamma:.2f})")
-                print(f"    - Maximum Eigenvalue (lambda_max):  {lambda_max:.4f}")
-                print(f"    - Lambda METR Index:        {metr:.4f} (Isotropic: ~0.25 | Spoofed: -> 1.0)")
-                print("-" * 80)
-                print("  Status: RUNNING COMPLIANT (Multi-Antenna Coherent Protection Enabled)")
-                print("=" * 80)
+                # Reset cursor position to home
+                sys.stdout.write("\033[H")
+                
+                # Render ASCII Banner
+                hud_str = []
+                hud_str.append("\033[36m================================================================================")
+                hud_str.append("   ____                     ____  _     _      _     _ ")
+                hud_str.append("  / ___| _ __   __ _  ___  / ___|| |__ (_) ___| | __| |")
+                hud_str.append("  \\___ \\| '_ \\ / _` |/ __| \\___ \\| '_ \\| |/ _ \\ |/ _` |")
+                hud_str.append("   ___) | |_) | (_| | (__   ___) | | | | |  __/ | (_| |")
+                hud_str.append("  |____/| .__/ \\__,_|\\___| |____/|_| |_|_|\\___|_|\\__,_|")
+                hud_str.append("        |_|                                            ")
+                hud_str.append("                 --- GROUND STATION THREAT MONITOR (HIL) ---")
+                hud_str.append("================================================================================\033[0m")
+                
+                # Metrics Panel
+                hud_str.append(f"\033[1;35m[ PIPELINE METRICS PANEL ]\033[0m")
+                hud_str.append(f"  Processed Blocks: {proc:<6} | Dropped Blocks: {drop_color}{drop:<5}\033[0m | Active Workers: {self.num_workers}")
+                hud_str.append(f"  Ingestion Queue:  {queue_pct:.1f}%  | DSP Latency:    {last_latency:.2f} ms (avg: {avg_latency:.2f} ms)")
+                hud_str.append(f"  Model Inference:  {avg_infer:.2f} us | AI Provider:    {self.engine.active_provider}")
+                hud_str.append("-" * 80)
+                
+                # Signal Integrity Panel
+                hud_str.append(f"\033[1;33m[ SIGNAL INTEGRITY PANEL ]\033[0m")
+                hud_str.append(f"  Sphericity LLR Stat: {sphericity:.4f} (Threshold: {self.spatial_detector.gamma:.2f})")
+                hud_str.append(f"  METR Anisotropy:     {metr:.4f} (Isotropic: ~0.25 | Breach: -> 1.0)")
+                hud_str.append(f"  Max Eigenvalue:      {lambda_max:.4f}")
+                hud_str.append(f"  Carrier Offset (CFO): {last_cfo:+.2f} Hz")
+                hud_str.append("-" * 80)
+                
+                # Threat Status Panel
+                hud_str.append(f"\033[1;34m[ ACTIVE THREAT STATUS DISPLAY ]\033[0m")
+                hud_str.append(f"  {status_box}")
+                hud_str.append("\033[36m================================================================================")
+                
+                # Write to stdout
+                sys.stdout.write("\n".join(hud_str) + "\n")
+                sys.stdout.flush()
 
     def execute(self):
         """Starts HIL integration execution loops."""
@@ -410,10 +541,14 @@ class SpatialHardwareHarness:
         
         try:
             self.producer_thread.join()
+            
+            # Wait for ingestion queue to empty first, while workers and logger are still active
+            self.iq_queue.join()
+            
+            # Now signal workers and loops to stop
             self.running = False
             
-            # Wait for queues to settle
-            self.iq_queue.join()
+            # Wait for log queue to empty
             self.log_queue.join()
             
             for t in self.workers:
@@ -433,7 +568,43 @@ class SpatialHardwareHarness:
             print("[+] Terminated successfully.")
 
 def main():
-    harness = SpatialHardwareHarness(duration_sec=30)
+    import argparse
+    parser = argparse.ArgumentParser(description="SpaceShield: Parallelized Spatial DSP Hardware Harness.")
+    parser.add_argument('-p', '--playback-file', type=str, default=None,
+                        help="Path to raw binary complex signal capture (or NPY file) for HIL playback testing.")
+    parser.add_argument('-t', '--sample-type', type=str, choices=['float32', 'int16'], default='float32',
+                        help="Unpacking sample type for binary playback (default: float32).")
+    parser.add_argument('-e', '--endianness', type=str, choices=['little', 'big', 'native'], default='little',
+                        help="Unpacking byte-ordering endianness for binary playback (default: little).")
+    parser.add_argument('-f', '--fs', type=float, default=2e6,
+                        help="Physical sampling clock rate in Hz (e.g. 2.0e6 or 5.0e6, default: 2.0e6).")
+    parser.add_argument('-d', '--duration', type=int, default=30,
+                        help="Total execution/stream duration in seconds (default: 30).")
+    parser.add_argument('-c', '--chunk-size', type=int, default=8192,
+                        help="Temporal frame size per channel block (default: 8192).")
+    parser.add_argument('-m', '--channels', type=int, default=4,
+                        help="Number of antenna array receiver channels (default: 4).")
+    
+    args = parser.parse_args()
+    
+    # Run cryptographic license validation audit
+    try:
+        from license_validator import run_license_audit
+        if not run_license_audit():
+            sys.exit(1)
+    except ImportError as e:
+        print(f"[-] Critical Error: License validator module missing: {e}")
+        sys.exit(1)
+        
+    harness = SpatialHardwareHarness(
+        duration_sec=args.duration,
+        fs=args.fs,
+        chunk_size=args.chunk_size,
+        num_channels=args.channels,
+        playback_file=args.playback_file,
+        playback_sample_type=args.sample_type,
+        playback_endianness=args.endianness
+    )
     harness.execute()
 
 if __name__ == "__main__":

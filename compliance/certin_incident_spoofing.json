@@ -1,5 +1,5 @@
 {
-    "timestamp": "2026-06-09T12:23:31Z",
+    "timestamp": "2026-06-09T15:04:10Z",
     "guideline_compliance": "CERT-In/SIA-India Space Cyber Security Framework (Feb 2026)",
     "facility_id": "IN-GS-KA-01",
     "node_type": "NavIC L5 / S-band SDR Receiver Agent",
@@ -12,17 +12,17 @@
         "severity_score_pct": 99.1,
         "telemetry": {
             "interference_to_noise_db": 11.07,
-            "spectral_flatness": 0.1427,
-            "glr_path_statistic": 289.3,
+            "spectral_flatness": 0.1409,
+            "glr_path_statistic": 265.14,
             "rff_fingerprint": {
-                "cfo": 15216.19921875,
-                "phase_noise": 0.29230839063065245,
-                "iq_amp_imbalance": 0.05719734728336334,
-                "iq_phase_imbalance": 0.46683523058891296
+                "cfo": 14466.4033203125,
+                "phase_noise": 0.29238399413579275,
+                "iq_amp_imbalance": 0.07256503403186798,
+                "iq_phase_imbalance": 0.1513461023569107
             }
         },
         "root_causes": [
-            "Spatial Array HIL: Sphericity Alert=True, METR=0.9269"
+            "Spatial Array HIL: Sphericity Alert=True, METR=0.9201"
         ]
     },
     "compliance_action": {
@@ -31,6 +31,6 @@
         "log_retention_period": "180 Days Mandatory",
         "security_certification": "ISO/IEC 27001 & FIPS 140-3 Hardware Compliant"
     },
-    "prev_hash": "df795848c43d749b7dc1c86beed717dce8da1232afaf6704a39e5cac5ddf855f",
-    "hash": "d4aafe64089eec2728d8b148d7d8fc48fd80ed627a0c5ae1768f75f76405ba0b"
+    "prev_hash": "0ad21aeaee869c95010b8c68cc51d2bf0b1c6bbe26f4e2c15146a3f8bda14f0c",
+    "hash": "273f6f8eb0193d5794b70cd57f7c4b793a83a4f485e86c90bd55df2ac4b1d159"
 }

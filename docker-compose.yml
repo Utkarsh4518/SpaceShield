@@ -1,0 +1,121 @@
+# ==============================================================================
+# SPACESHIELD PRODUCTION DEPLOYMENT ORCHESTRATION
+# Classification: Controlled Distribution — STQC-SS-2026-VAL-042
+# Target: Hardened Ground Station Edge Compute (NVIDIA Jetson Orin / x86_64)
+#
+# Security Controls:
+#   • Read-only root filesystem with explicit tmpfs scratch mounts
+#   • no-new-privileges seccomp enforcement
+#   • WORM log volume bound as host-managed persistent storage
+#   • Compliance configuration mounted read-only
+#   • Resource ceilings enforced to prevent edge node exhaustion
+# ==============================================================================
+
+services:
+  spaceshield-harness:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: spaceshield/rf-threat-agent:2.0.0
+    container_name: spaceshield-ground-station-monitor
+    restart: unless-stopped
+
+    # --------------------------------------------------------------------------
+    # GPU / CUDA Passthrough (NVIDIA Jetson Orin / Discrete GPU Hosts)
+    # --------------------------------------------------------------------------
+    # Requires nvidia-container-toolkit on the host. If no GPU is present,
+    # ONNX Runtime falls back to CPUExecutionProvider automatically.
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+        limits:
+          cpus: '6.0'
+          memory: 8G
+
+    # --------------------------------------------------------------------------
+    # Security Context: Defense-in-Depth Container Hardening
+    # --------------------------------------------------------------------------
+    # no-new-privileges: Prevents setuid/setgid escalation from any binary.
+    # read_only: Enforces an immutable root filesystem. All writes are
+    #   constrained to explicitly declared tmpfs mounts and bind volumes.
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      # /tmp: Scratch space for spaceshield_status.json healthcheck file
+      #       and TensorRT engine cache. noexec prevents execution of any
+      #       uploaded binaries; nosuid prevents privilege escalation.
+      - /tmp:rw,noexec,nosuid,size=128M
+      # /run: Runtime socket and PID file directory.
+      - /run:rw,noexec,nosuid,size=16M
+
+    # --------------------------------------------------------------------------
+    # Environmental Configuration & License Key Enforcement
+    # --------------------------------------------------------------------------
+    environment:
+      # Cryptographic license token injected from host .env or CI/CD secret.
+      # If empty, the harness falls back to compliance/license.lic file mount.
+      - SPACESHIELD_LICENSE_KEY=${SPACESHIELD_LICENSE_KEY:-}
+      - PYTHONUNBUFFERED=1
+      # Thread pool sizing for constrained edge hardware. Overrides os.cpu_count()
+      # when the host reports more cores than the cgroup limit allows.
+      - OMP_NUM_THREADS=${OMP_NUM_THREADS:-4}
+
+    # --------------------------------------------------------------------------
+    # Volume Binding Strategy
+    # --------------------------------------------------------------------------
+    volumes:
+      # WORM Log Persistence Volume:
+      # The spaceshield_180day_security.log file is opened with O_APPEND by
+      # the harness logger thread. The cryptographic hash chain implemented
+      # in verify_log_integrity.py detects any retroactive modification,
+      # truncation, or reordering of log entries. This bind-mount ensures
+      # log data survives container recreation and image upgrades.
+      - spaceshield-worm-logs:/app/data
+
+      # Compliance & License Configuration Volume (READ-ONLY):
+      # Contains license.lic, sbom.json, and audit protocol documents.
+      # Mounted read-only to prevent runtime modification of compliance state.
+      - ./compliance:/app/compliance:ro
+
+    # --------------------------------------------------------------------------
+    # Default Runtime Arguments
+    # --------------------------------------------------------------------------
+    # These override the CMD in the Dockerfile. Adjust for field deployment:
+    #   -p: Path to raw binary playback file for HIL testing
+    #   -f: Physical sampling clock rate (Hz)
+    #   -d: Stream duration (seconds)
+    #   -c: Temporal frame size per channel block
+    #   -m: Number of antenna array receiver channels
+    command: ["-f", "2000000", "-d", "30", "-c", "8192", "-m", "4"]
+
+    # --------------------------------------------------------------------------
+    # Log Rotation to Prevent Disk Exhaustion at Edge Receiver Nodes
+    # --------------------------------------------------------------------------
+    # Docker JSON file driver with size-capped rotation prevents stdout/stderr
+    # logs from consuming the edge node's storage. The harness writes structured
+    # telemetry to the WORM log volume; these container logs capture only the
+    # ANSI HUD output and diagnostic messages.
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+# ==============================================================================
+# Named Volumes — Persistent Storage Declarations
+# ==============================================================================
+# Using a named volume instead of a bind-mount provides:
+#   • Automatic creation on first docker-compose up
+#   • Portability across host filesystem layouts
+#   • Integration with Docker volume backup/snapshot tooling
+#   • Clear lifecycle management via docker volume prune
+volumes:
+  spaceshield-worm-logs:
+    driver: local
+    name: spaceshield-worm-logs
