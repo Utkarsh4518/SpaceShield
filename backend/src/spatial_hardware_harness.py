@@ -101,6 +101,12 @@ class SpatialHardwareHarness:
         self.latency_records = []
         self.inference_latencies = []
         self.last_log_time = 0.0  # Thread-safe global log throttling register
+        
+        # Runtime Config State
+        self.shared_gamma = 50.17
+        self.antenna_attenuation_db = 0.0
+        self.zero_trust_lockout = False
+        
         enable_ansi_support()
         
         # Pre-compiled production inference engine
@@ -227,22 +233,58 @@ class SpatialHardwareHarness:
             except Exception:
                 pass
 
+    def set_runtime_config(self, gamma, attenuation_db, lockout):
+        with self.metrics_lock:
+            self.shared_gamma = gamma
+            self.antenna_attenuation_db = attenuation_db
+            
+            if lockout and not self.zero_trust_lockout:
+                self.zero_trust_lockout = True
+                self.emergency_lockdown()
+            else:
+                self.zero_trust_lockout = lockout
+
+    def emergency_lockdown(self):
+        # Purge queue
+        with self.iq_queue.mutex:
+            self.iq_queue.queue.clear()
+        
+        # Write flag to ../../compliance/certin_incident_spoofing.json
+        # This is a hard-requirement for regulatory audits (certin)
+        import json
+        with open("../../compliance/certin_incident_spoofing.json", "w") as f:
+            json.dump({"EMERGENCY_LOCKDOWN": True, "timestamp": time.time(), "reason": "ZERO_TRUST_LOCKOUT_TRIGGERED"}, f)
+        print("\n\033[1;41;37m[!] CRITICAL: ZERO-TRUST LOCKOUT INITIATED. QUEUES PURGED.\033[0m\n")
+
     def processing_worker(self, worker_id):
         """DSP worker thread managing independent local detection and RFF extraction instances."""
         # Thread-local tracking state
         local_detector = SpatialGLRTDetector(num_channels=self.M, window_size=self.N, p_fa=1e-7)
-        local_detector.gamma = 50.17  # Override threshold to optimized value
         local_extractor = RFFFeatureExtractor(self.fs)
         
         # Thread-local calibration output buffer to avoid dynamic allocation overhead
         calibrated_packet = np.zeros((self.M, self.chunk_size), dtype=np.complex64)
         
         while self.running or not self.iq_queue.empty():
+            with self.metrics_lock:
+                current_gamma = self.shared_gamma
+                current_atten = self.antenna_attenuation_db
+                lockout_active = self.zero_trust_lockout
+            
+            if lockout_active:
+                time.sleep(0.1)
+                continue
+                
+            local_detector.gamma = current_gamma
+            
             try:
                 try:
                     iq_packet, scenario, enqueued_time = self.iq_queue.get(timeout=0.2)
                 except queue.Empty:
                     continue
+                
+                if current_atten > 0.0:
+                    iq_packet *= (10 ** (-current_atten / 20.0))
                 
                 t_start = time.perf_counter()
                 
