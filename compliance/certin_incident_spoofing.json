@@ -1,5 +1,5 @@
 {
-    "timestamp": "2026-06-09T15:04:10Z",
+    "timestamp": "2026-06-11T19:19:44Z",
     "guideline_compliance": "CERT-In/SIA-India Space Cyber Security Framework (Feb 2026)",
     "facility_id": "IN-GS-KA-01",
     "node_type": "NavIC L5 / S-band SDR Receiver Agent",
@@ -8,21 +8,22 @@
     "glr_status": "ALERT",
     "incident_details": {
         "threat_detected": true,
-        "threat_category": "SPOOFING",
-        "severity_score_pct": 99.1,
+        "threat_category": "JAMMING",
+        "severity_score_pct": 100.0,
         "telemetry": {
             "interference_to_noise_db": 11.07,
-            "spectral_flatness": 0.1409,
-            "glr_path_statistic": 265.14,
+            "spectral_flatness": 0.1403,
+            "glr_path_statistic": 362.53,
             "rff_fingerprint": {
-                "cfo": 14466.4033203125,
-                "phase_noise": 0.29238399413579275,
-                "iq_amp_imbalance": 0.07256503403186798,
-                "iq_phase_imbalance": 0.1513461023569107
+                "cfo": 14897.33203125,
+                "phase_noise": 0.2878333799686254,
+                "iq_amp_imbalance": 0.09085404872894287,
+                "iq_phase_imbalance": -0.24308131635189056
             }
         },
         "root_causes": [
-            "Spatial Array HIL: Sphericity Alert=True, METR=0.9201"
+            "Spatial Array HIL: Sphericity Alert=True, METR=0.9498",
+            "Edge-AI: Latency=649.3 us, Provider=CPUExecutionProvider"
         ]
     },
     "compliance_action": {
@@ -31,6 +32,6 @@
         "log_retention_period": "180 Days Mandatory",
         "security_certification": "ISO/IEC 27001 & FIPS 140-3 Hardware Compliant"
     },
-    "prev_hash": "0ad21aeaee869c95010b8c68cc51d2bf0b1c6bbe26f4e2c15146a3f8bda14f0c",
-    "hash": "273f6f8eb0193d5794b70cd57f7c4b793a83a4f485e86c90bd55df2ac4b1d159"
+    "prev_hash": "4ade4a1aaf9259290cc472ff5c100c473989a4b6ba92da31d5849030ef7eee09",
+    "hash": "33ccfbb1dff3ebae63ea151a572c11eb5a9ab9c0f9083c78d62d0b883dbab6a9"
 }
