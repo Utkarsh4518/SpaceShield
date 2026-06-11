@@ -31,12 +31,13 @@
         body {
             background-color: var(--bg-color);
             color: var(--text-main);
-            height: 100vh;
-            overflow: hidden; /* Prevent scrolling, fixed HUD */
+            min-height: 100vh;
+            overflow-y: auto;
+            overflow-x: hidden;
             display: flex;
             flex-direction: column;
-            padding: 20px;
-            gap: 20px;
+            padding: 1.5rem;
+            gap: 1.5rem;
         }
 
         /* ──────────────────────────────────────────────────────────────────────
@@ -49,9 +50,11 @@
             background-color: var(--panel-bg);
             border: 1px solid var(--border-color);
             border-radius: 8px;
-            padding: 20px 30px;
+            padding: 1.5rem 2rem;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
             transition: all 0.3s ease;
+            flex-wrap: wrap;
+            gap: 1rem;
         }
 
         .hud-title {
@@ -60,14 +63,14 @@
         }
         
         .hud-title h1 {
-            font-size: 24px;
+            font-size: 1.5rem;
             font-weight: 600;
             letter-spacing: 1px;
             text-transform: uppercase;
         }
         
         .hud-title span {
-            font-size: 12px;
+            font-size: 0.75rem;
             color: var(--text-dim);
             font-family: monospace;
             margin-top: 4px;
@@ -77,10 +80,10 @@
             display: flex;
             align-items: center;
             gap: 15px;
-            padding: 10px 20px;
+            padding: 0.75rem 1.5rem;
             border-radius: 4px;
             font-weight: bold;
-            font-size: 20px;
+            font-size: 1.25rem;
             letter-spacing: 2px;
             text-transform: uppercase;
             border: 2px solid transparent;
@@ -114,44 +117,62 @@
         }
 
         /* ──────────────────────────────────────────────────────────────────────
-           MAIN DASHBOARD GRID
+           MAIN DASHBOARD GRID & RESPONSIVE BREAKPOINTS
            ────────────────────────────────────────────────────────────────────── */
         .dashboard-grid {
             display: grid;
-            grid-template-columns: 3fr 1fr;
-            grid-template-rows: 1fr;
-            gap: 20px;
+            gap: 1.5rem;
             flex-grow: 1;
-            min-height: 0; /* Important for flex child */
+            min-height: 0;
+            grid-template-columns: 1fr; /* Mobile default (< 768px): 1-column linear feed */
+        }
+
+        @media (min-width: 768px) {
+            .dashboard-grid {
+                /* Tablet (768px - 1023px): Even 2-column stacked layout */
+                grid-template-columns: 1fr 1fr;
+            }
+            .chart-panel {
+                grid-column: 1 / -1; /* Make chart span full width across 2 columns */
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .dashboard-grid {
+                /* Desktop (>= 1024px): Dense 3-column tactical setup */
+                grid-template-columns: 2fr 1fr 1fr;
+            }
+            .chart-panel {
+                grid-column: auto; /* Reset to natural grid flow */
+            }
         }
 
         .panel {
             background-color: var(--panel-bg);
             border: 1px solid var(--border-color);
             border-radius: 8px;
-            padding: 20px;
+            padding: 1.5rem;
             display: flex;
             flex-direction: column;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
         }
 
         .panel-header {
-            font-size: 14px;
+            font-size: 0.875rem;
             font-weight: 600;
             color: var(--text-dim);
             text-transform: uppercase;
             letter-spacing: 1px;
-            margin-bottom: 15px;
+            margin-bottom: 1rem;
             border-bottom: 1px solid var(--border-color);
-            padding-bottom: 10px;
+            padding-bottom: 0.75rem;
         }
 
         /* Chart Container Layer Optimization */
         .chart-container {
-            flex-grow: 1;
             position: relative;
+            height: 280px;
             width: 100%;
-            height: 100%;
             /* Force GPU compositing for canvas rendering */
             transform: translateZ(0);
             will-change: transform;
@@ -161,14 +182,14 @@
         .metrics-stack {
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 1.5rem;
         }
 
         .metric-card {
             background-color: #0b1016;
             border: 1px solid var(--border-color);
             border-radius: 6px;
-            padding: 20px;
+            padding: 1.5rem;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -177,39 +198,82 @@
         }
 
         .metric-label {
-            font-size: 12px;
+            font-size: 0.75rem;
             color: var(--text-dim);
             text-transform: uppercase;
-            margin-bottom: 5px;
+            margin-bottom: 0.25rem;
         }
 
         .metric-value {
-            font-size: 32px;
+            font-size: 2rem;
             font-weight: bold;
             font-family: monospace;
             color: var(--text-main);
         }
 
         .metric-unit {
-            font-size: 14px;
+            font-size: 0.875rem;
             color: var(--text-dim);
-            margin-left: 5px;
+            margin-left: 0.25rem;
         }
         
         .metric-status {
-            font-size: 12px;
-            margin-top: 8px;
+            font-size: 0.75rem;
+            margin-top: 0.5rem;
             font-weight: 600;
         }
         
         .status-good { color: var(--color-normal); }
         .status-bad { color: var(--color-spoofing); }
+
+        /* Forensic Activity Stream Log Feed */
+        .log-feed-container {
+            flex-grow: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            font-family: monospace;
+            font-size: 0.75rem;
+            height: 280px;
+        }
+        
+        .log-feed-container::-webkit-scrollbar {
+            width: 6px;
+        }
+        .log-feed-container::-webkit-scrollbar-track {
+            background: var(--bg-color);
+        }
+        .log-feed-container::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 3px;
+        }
+
+        .log-entry {
+            background: #1a2332;
+            padding: 0.5rem;
+            border-left: 3px solid var(--color-normal);
+            border-radius: 2px;
+            color: var(--text-dim);
+            word-break: break-all;
+        }
+        .log-entry.log-jamming {
+            border-left-color: var(--color-jamming);
+        }
+        .log-entry.log-spoofing {
+            border-left-color: var(--color-spoofing);
+        }
+        .log-timestamp {
+            color: var(--text-main);
+            font-weight: bold;
+            margin-right: 0.5rem;
+        }
         
         #connection-status {
             position: absolute;
             top: 20px;
             right: 20px;
-            font-size: 12px;
+            font-size: 0.75rem;
             padding: 4px 8px;
             border-radius: 4px;
             background-color: var(--border-color);
@@ -218,6 +282,32 @@
 
         .conn-offline { color: var(--color-spoofing); }
         .conn-online { color: var(--color-normal); }
+
+        .control-panel {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            flex-shrink: 0;
+        }
+
+        /* Tactile inputs for mobile */
+        input[type="range"] {
+            min-height: 44px; /* Minimum tactile hit target height */
+            width: 100%;
+            cursor: pointer;
+        }
+
+        button {
+            min-height: 44px; /* Minimum tactile hit target height */
+        }
+
+        #lockdown-btn:hover {
+            background-color: var(--color-spoofing) !important;
+            color: #fff !important;
+            box-shadow: 0 0 15px rgba(248,81,73,0.5);
+        }
 
     </style>
 </head>
@@ -237,17 +327,17 @@
     </header>
 
     <!-- Main Content Grid -->
-    <div class="dashboard-grid">
+    <main class="dashboard-grid">
         
-        <!-- Left: Rolling Statistical Chart -->
-        <div class="panel">
+        <!-- Column 1: Rolling Statistical Chart -->
+        <div class="panel chart-panel">
             <div class="panel-header">Spatiotemporal Detection Matrix (GLRT / FIM)</div>
             <div class="chart-container">
                 <canvas id="telemetryChart"></canvas>
             </div>
         </div>
 
-        <!-- Right: Micro-Readout Panels -->
+        <!-- Column 2: Micro-Readout Panels -->
         <div class="metrics-stack">
             <div class="metric-card">
                 <div class="metric-label">FP16 ONNX Inference Latency</div>
@@ -274,6 +364,32 @@
             </div>
         </div>
 
+        <!-- Column 3: Forensic Activity Stream Log Feed -->
+        <div class="panel">
+            <div class="panel-header">Forensic Activity Stream Log Feed</div>
+            <div id="log-feed" class="log-feed-container">
+                <!-- Logs will be dynamically injected here -->
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Sovereign Hardware Interface Controller -->
+    <div class="control-panel">
+        <div class="panel-header" style="color: var(--color-spoofing); border-bottom-color: rgba(248,81,73,0.3);">SOVEREIGN HARDWARE INTERFACE CONTROLLER</div>
+        <div style="display: flex; flex-wrap: wrap; gap: 1.5rem; justify-content: space-between; align-items: center;">
+            <div style="display: flex; flex-direction: column; gap: 0.5rem; flex: 1 1 300px;">
+                <label style="font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase;">Dynamic Chi-Squared Threshold Override (gamma): <span id="gamma-readout" style="color: var(--text-main); font-weight: bold; font-family: monospace;">50.17</span></label>
+                <input type="range" id="gamma-slider" min="10.00" max="150.00" step="0.01" value="50.17" oninput="postConfigUpdate()">
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 0.5rem; flex: 1 1 300px;">
+                <label style="font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase;">Software-Defined Antenna Attenuation (dB): <span id="atten-readout" style="color: var(--text-main); font-weight: bold; font-family: monospace;">0.0</span></label>
+                <input type="range" id="atten-slider" min="0.0" max="30.0" step="0.1" value="0.0" oninput="postConfigUpdate()">
+            </div>
+            <button id="lockdown-btn" onclick="initiateLockdown()" style="flex: 1 1 300px; background-color: transparent; color: var(--color-spoofing); border: 2px solid var(--color-spoofing); padding: 1rem; border-radius: 4px; font-weight: 700; font-size: 0.875rem; text-transform: uppercase; cursor: pointer; transition: all 0.3s;">
+                INITIATE ZERO-TRUST POOL LOCKDOWN
+            </button>
+        </div>
     </div>
 
     <script>
@@ -386,8 +502,51 @@
         const elFimVal = document.getElementById('fim-val');
         const elFimStatus = document.getElementById('fim-status');
         const elConnStatus = document.getElementById('connection-status');
+        const elLogFeed = document.getElementById('log-feed');
         
         let lastThreatState = "NORMAL";
+
+        // ──────────────────────────────────────────────────────────────────────
+        // Hardware Interface Controller Dispatch
+        // ──────────────────────────────────────────────────────────────────────
+        
+        function postConfigUpdate() {
+            const gamma = parseFloat(document.getElementById('gamma-slider').value);
+            const atten = parseFloat(document.getElementById('atten-slider').value);
+            
+            document.getElementById('gamma-readout').textContent = gamma.toFixed(2);
+            document.getElementById('atten-readout').textContent = atten.toFixed(1) + ' dB';
+            
+            fetch('http://127.0.0.1:8000/api/v1/config/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    detection_threshold: gamma,
+                    antenna_attenuation_db: atten,
+                    zero_trust_lockout: false
+                })
+            }).catch(e => console.error('[!] API Config Update Failed:', e));
+        }
+
+        function initiateLockdown() {
+            const gamma = parseFloat(document.getElementById('gamma-slider').value);
+            const atten = parseFloat(document.getElementById('atten-slider').value);
+            
+            fetch('http://127.0.0.1:8000/api/v1/config/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    detection_threshold: gamma,
+                    antenna_attenuation_db: atten,
+                    zero_trust_lockout: true
+                })
+            }).then(() => {
+                const btn = document.getElementById('lockdown-btn');
+                btn.style.backgroundColor = 'var(--color-spoofing)';
+                btn.style.color = '#fff';
+                btn.textContent = 'LOCKDOWN INITIATED';
+            }).catch(e => console.error('[!] Lockdown Signal Failed:', e));
+        }
 
         // ──────────────────────────────────────────────────────────────────────
         // Data Processing & DOM Updates
@@ -463,6 +622,23 @@
             
             // Render efficiently bypassing expensive animation frames
             telemetryChart.update('none');
+
+            // 4. Forensic Activity Log Append
+            const timestamp = new Date().toISOString().split('T')[1].replace('Z', '');
+            const logClass = currentThreat === "NORMAL" ? "" : (currentThreat === "JAMMING" ? "log-jamming" : "log-spoofing");
+            const logMessage = `β=${fimBeta.toFixed(3)} | Latency=${latency}µs`;
+            
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${logClass}`;
+            entry.innerHTML = `<span class="log-timestamp">[${timestamp}]</span> ${logMessage}`;
+            
+            elLogFeed.appendChild(entry);
+            
+            // Auto-scroll to bottom and limit buffer
+            if (elLogFeed.children.length > 50) {
+                elLogFeed.removeChild(elLogFeed.firstChild);
+            }
+            elLogFeed.scrollTop = elLogFeed.scrollHeight;
         }
 
         // ──────────────────────────────────────────────────────────────────────
@@ -493,8 +669,9 @@
 
             ws.onmessage = (event) => {
                 try {
-                    const payload = JSON.parse(event.data);
-                    updateDashboard(payload);
+                    const data = JSON.parse(event.data);
+                    console.log("[WS DATA]:", data);
+                    updateDashboard(data);
                 } catch (e) {
                     console.error("[!] Failed to parse telemetry frame:", e);
                 }
