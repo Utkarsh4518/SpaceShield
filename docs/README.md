@@ -3,7 +3,7 @@
 > **A B2B/B2G Deep-Tech Startup Supported by the Ministry of Electronics and Information Technology (MeitY), Government of India**  
 > *Sovereign signal integrity validation at the terrestrial-RF frontier for satellite communication networks and NavIC navigation.*
 
-> ### 🗂️ Quick Navigation Guide
+> ### Quick Navigation Guide
 > - **Core Simulator (Python)**: [`/src/rf_threat_simulator.py`](../src/rf_threat_simulator.py)
 > - **Visual Dashboards**: [Normal Dashboard](../outputs/spaceshield_dashboard_normal.png) | [Jamming Dashboard](../outputs/spaceshield_dashboard_jamming.png) | [Spoofing Dashboard](../outputs/spaceshield_dashboard_spoofing.png)
 > - **Compliance & SBOM**: [CycloneDX SBOM](../compliance/sbom.json) | [CERT-In Reports](../compliance/) | [180-Day Security Log](../data/spaceshield_180day_security.log)
