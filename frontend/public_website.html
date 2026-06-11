@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpaceShield | Sovereign Layer-1 Cyber-Defense</title>
+    <style>
+        /* ──────────────────────────────────────────────────────────────────────
+           CSS VARIABLES & GLOBAL RESET
+           ────────────────────────────────────────────────────────────────────── */
+        :root {
+            --bg-color: #0b1016; /* Deep slate charcoal */
+            --bg-secondary: #131b24;
+            --accent-green: #39d353; /* Neon green accent trim */
+            --accent-glow: rgba(57, 211, 83, 0.4);
+            --text-main: #ffffff; /* Stark white typography */
+            --text-dim: #7d8590;
+            --border-color: #212c3a;
+            --font-stack: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: var(--font-stack);
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            /* Subtle muted grid pattern lines */
+            background-image: 
+                linear-gradient(rgba(33, 44, 58, 0.3) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(33, 44, 58, 0.3) 1px, transparent 1px);
+            background-size: 40px 40px;
+            background-attachment: fixed;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* ──────────────────────────────────────────────────────────────────────
+           HEADER / NAVIGATION
+           ────────────────────────────────────────────────────────────────────── */
+        header {
+            padding: 30px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(33, 44, 58, 0.5);
+            margin-bottom: 80px;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo::before {
+            content: "";
+            display: block;
+            width: 12px;
+            height: 12px;
+            background-color: var(--accent-green);
+            box-shadow: 0 0 10px var(--accent-green);
+            border-radius: 50%;
+        }
+
+        /* ──────────────────────────────────────────────────────────────────────
+           HERO SECTION
+           ────────────────────────────────────────────────────────────────────── */
+        .hero {
+            text-align: center;
+            padding: 60px 0 100px 0;
+            position: relative;
+        }
+
+        .hero h1 {
+            font-size: 4.5rem;
+            font-weight: 800;
+            line-height: 1.1;
+            margin-bottom: 30px;
+            letter-spacing: -1px;
+            color: var(--text-main);
+            max-width: 1000px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .hero p.sub-heading {
+            font-size: 1.25rem;
+            color: var(--text-dim);
+            max-width: 800px;
+            margin: 0 auto 50px auto;
+            line-height: 1.8;
+            font-weight: 400;
+        }
+
+        /* Glowing Interactive CTA Button */
+        .cta-button {
+            display: inline-block;
+            background-color: transparent;
+            color: var(--accent-green);
+            font-size: 1.1rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            padding: 20px 40px;
+            border: 2px solid var(--accent-green);
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 15px var(--accent-glow), inset 0 0 10px var(--accent-glow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cta-button:hover {
+            background-color: var(--accent-green);
+            color: var(--bg-color);
+            box-shadow: 0 0 30px var(--accent-green), inset 0 0 20px var(--accent-green);
+        }
+
+        /* ──────────────────────────────────────────────────────────────────────
+           THE EMPIRICAL MOAT GRID
+           ────────────────────────────────────────────────────────────────────── */
+        .section-title {
+            text-align: center;
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 60px;
+            letter-spacing: 1px;
+            color: var(--text-main);
+            text-transform: uppercase;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 20px;
+            display: inline-block;
+        }
+
+        .metrics-section {
+            padding: 40px 0 100px 0;
+            text-align: center;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+            text-align: left;
+        }
+
+        .card {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-top: 4px solid var(--accent-green);
+            padding: 40px 30px;
+            border-radius: 6px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            transition: transform 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card-icon {
+            font-size: 24px;
+            font-family: var(--font-mono);
+            color: var(--accent-green);
+            margin-bottom: 20px;
+        }
+
+        .card-metric {
+            font-size: 2.5rem;
+            font-weight: 800;
+            font-family: var(--font-mono);
+            color: var(--text-main);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+        }
+
+        .card-metric span {
+            font-size: 1.2rem;
+            color: var(--text-dim);
+            font-family: var(--font-stack);
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+            color: var(--accent-green);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .card-desc {
+            font-size: 0.95rem;
+            color: var(--text-dim);
+            line-height: 1.6;
+            flex-grow: 1;
+        }
+
+        /* ──────────────────────────────────────────────────────────────────────
+           COMMERCIAL SCALE MODEL SECTION
+           ────────────────────────────────────────────────────────────────────── */
+        .commercial-section {
+            padding: 80px 0 120px 0;
+            border-top: 1px solid rgba(33, 44, 58, 0.5);
+        }
+
+        .commercial-row {
+            display: flex;
+            align-items: center;
+            gap: 60px;
+            background-color: rgba(19, 27, 36, 0.7);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 60px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+            backdrop-filter: blur(10px);
+        }
+
+        .commercial-content {
+            flex: 1;
+        }
+
+        .commercial-content h2 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 20px;
+            line-height: 1.2;
+        }
+
+        .commercial-content p {
+            font-size: 1.1rem;
+            color: var(--text-dim);
+            margin-bottom: 30px;
+        }
+
+        .commercial-features {
+            list-style: none;
+        }
+
+        .commercial-features li {
+            position: relative;
+            padding-left: 30px;
+            margin-bottom: 15px;
+            font-size: 1.05rem;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+        }
+
+        .commercial-features li::before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            color: var(--accent-green);
+            font-weight: bold;
+            font-family: var(--font-mono);
+        }
+
+        .terminal-block {
+            flex: 1;
+            background-color: #05080c;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 20px;
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            color: var(--text-dim);
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+            position: relative;
+        }
+
+        .terminal-block::before {
+            content: "deployment_matrix.sh";
+            display: block;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+            color: #4b5563;
+        }
+
+        .terminal-line {
+            margin-bottom: 8px;
+        }
+
+        .cmd { color: var(--accent-green); }
+        .arg { color: #58a6ff; }
+        .sys { color: #8b949e; }
+
+        /* ──────────────────────────────────────────────────────────────────────
+           FOOTER
+           ────────────────────────────────────────────────────────────────────── */
+        footer {
+            text-align: center;
+            padding: 40px 0;
+            border-top: 1px solid var(--border-color);
+            color: var(--text-dim);
+            font-size: 0.9rem;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 900px) {
+            .hero h1 { font-size: 3rem; }
+            .commercial-row { flex-direction: column; padding: 40px; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="soft-aurora-bg" style="position: fixed; top:0; left:0; width:100vw; height:100vh; z-index: -1; pointer-events: auto; opacity: 0.45;"></div>
+
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <div class="logo">SPACESHIELD</div>
+        </header>
+
+        <!-- Hero Section -->
+        <section class="hero">
+            <h1>Sovereign Layer-1 Cyber-Defense for Satellite Ground Segments.</h1>
+            <p class="sub-heading">
+                An air-gapped, software-defined edge agent that detects, calibrates, and isolates jamming and weaponized spoofing vectors at microsecond line rates. Seamlessly containerized. Fully compliant with the CERT-In 2026 Space Security Guidelines.
+            </p>
+            <a href="#audit" class="cta-button">Request Technical Whitepaper / Schedule Sandbox Evaluation Audit</a>
+        </section>
+
+        <!-- The Empirical Moat Grid -->
+        <section class="metrics-section">
+            <h2 class="section-title">The Empirical Moat</h2>
+            <div class="grid">
+                
+                <!-- Card A: Array Calibration Engine -->
+                <div class="card">
+                    <div class="card-icon">[01] CALIBRATE</div>
+                    <div class="card-metric">~24.40 <span>µs</span></div>
+                    <div class="card-title">Array Calibration Engine</div>
+                    <div class="card-desc">
+                        Utilizing ultra-fast blind SVD phase and gain equalization to neutralize dynamic terrestrial channel non-idealities before decoding.
+                    </div>
+                </div>
+
+                <!-- Card B: Tensor Inference Core -->
+                <div class="card">
+                    <div class="card-icon">[02] INFER</div>
+                    <div class="card-metric">~199.72 <span>µs</span></div>
+                    <div class="card-title">Tensor Inference Core</div>
+                    <div class="card-desc">
+                        Running graph-rewritten, quantized FP16 ONNX fingerprinting networks directly at the edge, enforcing classification without cloud latency.
+                    </div>
+                </div>
+
+                <!-- Card C: Line-Rate Ingestion -->
+                <div class="card">
+                    <div class="card-icon">[03] INGEST</div>
+                    <div class="card-metric">0 <span>Drops</span></div>
+                    <div class="card-title">Line-Rate Ingestion Threshold</div>
+                    <div class="card-desc">
+                        Driven by a 24-thread parallelized worker pool architecture sustaining a continuous 2.0 MSPS complex signal ingestion rate under heavy jamming conditions.
+                    </div>
+                </div>
+
+                <!-- Card D: Mathematical Separation Bounds -->
+                <div class="card">
+                    <div class="card-icon">[04] SEPARATE</div>
+                    <div class="card-metric">β = 1.0000</div>
+                    <div class="card-title">Absolute Mathematical Bounds</div>
+                    <div class="card-desc">
+                        Catching rank-1 spoofers instantly via severe covariance matrix collapse (β = 1.00), while nominal constellations distribute smoothly (β = 0.9887).
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- Low-Friction Commercial Scale Model Section -->
+        <section class="commercial-section">
+            <div class="commercial-row">
+                <div class="commercial-content">
+                    <h2>Annual Software License Deployment Matrix</h2>
+                    <p>
+                        SpaceShield functions as a pure software-defined solution. Transition from vulnerability to total coverage via OpEx, avoiding the capital burn of new satellite launches or bespoke hardware installations.
+                    </p>
+                    <ul class="commercial-features">
+                        <li>Zero new hardware requirements or rack footprint expansions.</li>
+                        <li>Deployed as a hardened, non-root microservice image.</li>
+                        <li>Integrates straight onto existing analog terminal computing racks.</li>
+                        <li>Automated CERT-In 2026 Space Security reporting ledgers.</li>
+                    </ul>
+                </div>
+                
+                <div class="terminal-block">
+                    <div class="terminal-line sys"># Pull the air-gapped sovereign microservice image</div>
+                    <div class="terminal-line"><span class="cmd">docker</span> pull spaceshield/edge-agent:latest</div>
+                    <br>
+                    <div class="terminal-line sys"># Deploy as a non-root daemon onto existing ground station racks</div>
+                    <div class="terminal-line"><span class="cmd">docker</span> run <span class="arg">-d --network host --user 1001</span> \</div>
+                    <div class="terminal-line">&nbsp;&nbsp;<span class="arg">-v</span> /var/run/sdr_buffer:/data/iq_stream \</div>
+                    <div class="terminal-line">&nbsp;&nbsp;<span class="arg">-v</span> /opt/spaceshield/license.lic:/app/license.lic:ro \</div>
+                    <div class="terminal-line">&nbsp;&nbsp;spaceshield/edge-agent:latest</div>
+                    <br>
+                    <div class="terminal-line sys">[+] SpaceShield Edge Agent activated. 0 Blocks Dropped.</div>
+                    <div class="terminal-line sys">[+] Ingesting at 2.0 MSPS. P_fa target locked to 10^-7.</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer>
+            <p>&copy; 2026 SpaceShield Deep-Tech Defense Systems. All Rights Reserved.</p>
+        </footer>
+    </div>
+
+    <script type="module">
+        import { Renderer, Program, Mesh, Triangle } from 'https://cdn.jsdelivr.net/npm/ogl@1.0.11/+esm';
+
+        function initSoftAurora() {
+            const container = document.getElementById('soft-aurora-bg');
+            if (!container) return;
+
+            const renderer = new Renderer({ alpha: true, premultipliedAlpha: false });
+            const gl = renderer.gl;
+            gl.clearColor(0, 0, 0, 0);
+
+            function hexToVec3(hex) {
+                const h = hex.replace('#', '');
+                return [
+                    parseInt(h.slice(0, 2), 16) / 255,
+                    parseInt(h.slice(2, 4), 16) / 255,
+                    parseInt(h.slice(4, 6), 16) / 255
+                ];
+            }
+
+            const vertexShader = `
+                attribute vec2 uv;
+                attribute vec2 position;
+                varying vec2 vUv;
+                void main() {
+                    vUv = uv;
+                    gl_Position = vec4(position, 0, 1);
+                }
+            `;
+
+            const fragmentShader = `
+                precision highp float;
+
+                uniform float uTime;
+                uniform vec3 uResolution;
+                uniform float uSpeed;
+                uniform float uScale;
+                uniform float uBrightness;
+                uniform vec3 uColor1;
+                uniform vec3 uColor2;
+                uniform float uNoiseFreq;
+                uniform float uNoiseAmp;
+                uniform float uBandHeight;
+                uniform float uBandSpread;
+                uniform float uOctaveDecay;
+                uniform float uLayerOffset;
+                uniform float uColorSpeed;
+                uniform vec2 uMouse;
+                uniform float uMouseInfluence;
+                uniform bool uEnableMouse;
+
+                #define TAU 6.28318
+
+                vec3 gradientHash(vec3 p) {
+                    p = vec3(
+                        dot(p, vec3(127.1, 311.7, 234.6)),
+                        dot(p, vec3(269.5, 183.3, 198.3)),
+                        dot(p, vec3(169.5, 283.3, 156.9))
+                    );
+                    vec3 h = fract(sin(p) * 43758.5453123);
+                    float phi = acos(2.0 * h.x - 1.0);
+                    float theta = TAU * h.y;
+                    return vec3(cos(theta) * sin(phi), sin(theta) * cos(phi), cos(phi));
+                }
+
+                float quinticSmooth(float t) {
+                    float t2 = t * t;
+                    float t3 = t * t2;
+                    return 6.0 * t3 * t2 - 15.0 * t2 * t2 + 10.0 * t3;
+                }
+
+                vec3 cosineGradient(float t, vec3 a, vec3 b, vec3 c, vec3 d) {
+                    return a + b * cos(TAU * (c * t + d));
+                }
+
+                float perlin3D(float amplitude, float frequency, float px, float py, float pz) {
+                    float x = px * frequency;
+                    float y = py * frequency;
+
+                    float fx = floor(x); float fy = floor(y); float fz = floor(pz);
+                    float cx = ceil(x);  float cy = ceil(y);  float cz = ceil(pz);
+
+                    vec3 g000 = gradientHash(vec3(fx, fy, fz));
+                    vec3 g100 = gradientHash(vec3(cx, fy, fz));
+                    vec3 g010 = gradientHash(vec3(fx, cy, fz));
+                    vec3 g110 = gradientHash(vec3(cx, cy, fz));
+                    vec3 g001 = gradientHash(vec3(fx, fy, cz));
+                    vec3 g101 = gradientHash(vec3(cx, fy, cz));
+                    vec3 g011 = gradientHash(vec3(fx, cy, cz));
+                    vec3 g111 = gradientHash(vec3(cx, cy, cz));
+
+                    float d000 = dot(g000, vec3(x - fx, y - fy, pz - fz));
+                    float d100 = dot(g100, vec3(x - cx, y - fy, pz - fz));
+                    float d010 = dot(g010, vec3(x - fx, y - cy, pz - fz));
+                    float d110 = dot(g110, vec3(x - cx, y - cy, pz - fz));
+                    float d001 = dot(g001, vec3(x - fx, y - fy, pz - cz));
+                    float d101 = dot(g101, vec3(x - cx, y - fy, pz - cz));
+                    float d011 = dot(g011, vec3(x - fx, y - cy, pz - cz));
+                    float d111 = dot(g111, vec3(x - cx, y - cy, pz - cz));
+
+                    float sx = quinticSmooth(x - fx);
+                    float sy = quinticSmooth(y - fy);
+                    float sz = quinticSmooth(pz - fz);
+
+                    float lx00 = mix(d000, d100, sx);
+                    float lx10 = mix(d010, d110, sx);
+                    float lx01 = mix(d001, d101, sx);
+                    float lx11 = mix(d011, d111, sx);
+
+                    float ly0 = mix(lx00, lx10, sy);
+                    float ly1 = mix(lx01, lx11, sy);
+
+                    return amplitude * mix(ly0, ly1, sz);
+                }
+
+                float auroraGlow(float t, vec2 shift) {
+                    vec2 uv = gl_FragCoord.xy / uResolution.y;
+                    uv += shift;
+
+                    float noiseVal = 0.0;
+                    float freq = uNoiseFreq;
+                    float amp = uNoiseAmp;
+                    vec2 samplePos = uv * uScale;
+
+                    for (float i = 0.0; i < 3.0; i += 1.0) {
+                        noiseVal += perlin3D(amp, freq, samplePos.x, samplePos.y, t);
+                        amp *= uOctaveDecay;
+                        freq *= 2.0;
+                    }
+
+                    float yBand = uv.y * 10.0 - uBandHeight * 10.0;
+                    return 0.3 * max(exp(uBandSpread * (1.0 - 1.1 * abs(noiseVal + yBand))), 0.0);
+                }
+
+                void main() {
+                    vec2 uv = gl_FragCoord.xy / uResolution.xy;
+                    float t = uSpeed * 0.4 * uTime;
+
+                    vec2 shift = vec2(0.0);
+                    if (uEnableMouse) {
+                        shift = (uMouse - 0.5) * uMouseInfluence;
+                    }
+
+                    vec3 col = vec3(0.0);
+                    col += 0.99 * auroraGlow(t, shift) * cosineGradient(uv.x + uTime * uSpeed * 0.2 * uColorSpeed, vec3(0.5), vec3(0.5), vec3(1.0), vec3(0.3, 0.20, 0.20)) * uColor1;
+                    col += 0.99 * auroraGlow(t + uLayerOffset, shift) * cosineGradient(uv.x + uTime * uSpeed * 0.1 * uColorSpeed, vec3(0.5), vec3(0.5), vec3(2.0, 1.0, 0.0), vec3(0.5, 0.20, 0.25)) * uColor2;
+
+                    col *= uBrightness;
+                    float alpha = clamp(length(col), 0.0, 1.0);
+                    gl_FragColor = vec4(col, alpha);
+                }
+            `;
+
+            let program;
+            let currentMouse = [0.5, 0.5];
+            let targetMouse = [0.5, 0.5];
+            const enableMouseInteraction = true;
+
+            function handleMouseMove(e) {
+                const rect = gl.canvas.getBoundingClientRect();
+                targetMouse = [
+                    (e.clientX - rect.left) / rect.width,
+                    1.0 - (e.clientY - rect.top) / rect.height
+                ];
+            }
+
+            function handleMouseLeave() {
+                targetMouse = [0.5, 0.5];
+            }
+
+            function resize() {
+                renderer.setSize(container.offsetWidth, container.offsetHeight);
+                if (program) {
+                    program.uniforms.uResolution.value = [gl.canvas.width, gl.canvas.height, gl.canvas.width / gl.canvas.height];
+                }
+            }
+            window.addEventListener('resize', resize);
+            resize();
+
+            const geometry = new Triangle(gl);
+            program = new Program(gl, {
+                vertex: vertexShader,
+                fragment: fragmentShader,
+                uniforms: {
+                    uTime: { value: 0 },
+                    uResolution: { value: [gl.canvas.width, gl.canvas.height, gl.canvas.width / gl.canvas.height] },
+                    uSpeed: { value: 0.6 },
+                    uScale: { value: 1.5 },
+                    uBrightness: { value: 1.0 },
+                    uColor1: { value: hexToVec3('#f7f7f7') },
+                    uColor2: { value: hexToVec3('#39d353') },
+                    uNoiseFreq: { value: 2.5 },
+                    uNoiseAmp: { value: 1.0 },
+                    uBandHeight: { value: 0.5 },
+                    uBandSpread: { value: 1.0 },
+                    uOctaveDecay: { value: 0.1 },
+                    uLayerOffset: { value: 0 },
+                    uColorSpeed: { value: 1.0 },
+                    uMouse: { value: new Float32Array([0.5, 0.5]) },
+                    uMouseInfluence: { value: 0.25 },
+                    uEnableMouse: { value: enableMouseInteraction }
+                }
+            });
+
+            const mesh = new Mesh(gl, { geometry, program });
+            container.appendChild(gl.canvas);
+
+            if (enableMouseInteraction) {
+                gl.canvas.addEventListener('mousemove', handleMouseMove);
+                gl.canvas.addEventListener('mouseleave', handleMouseLeave);
+            }
+
+            let animationFrameId;
+
+            function update(time) {
+                animationFrameId = requestAnimationFrame(update);
+                program.uniforms.uTime.value = time * 0.001;
+
+                if (enableMouseInteraction) {
+                    currentMouse[0] += 0.05 * (targetMouse[0] - currentMouse[0]);
+                    currentMouse[1] += 0.05 * (targetMouse[1] - currentMouse[1]);
+                    program.uniforms.uMouse.value[0] = currentMouse[0];
+                    program.uniforms.uMouse.value[1] = currentMouse[1];
+                } else {
+                    program.uniforms.uMouse.value[0] = 0.5;
+                    program.uniforms.uMouse.value[1] = 0.5;
+                }
+
+                renderer.render({ scene: mesh });
+            }
+            animationFrameId = requestAnimationFrame(update);
+        }
+
+        document.addEventListener('DOMContentLoaded', initSoftAurora);
+    </script>
+</body>
+</html>
