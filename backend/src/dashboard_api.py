@@ -24,6 +24,7 @@ import threading
 from typing import Set
 
 import uvicorn
+from pydantic import BaseModel
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -63,6 +64,12 @@ active_connections: Set[WebSocket] = set()
 
 # Global reference to the executing harness for graceful teardown mechanics
 global_harness_instance = None
+
+# Runtime State Configuration Payload
+class ConfigUpdate(BaseModel):
+    detection_threshold: float
+    antenna_attenuation_db: float
+    zero_trust_lockout: bool
 
 # ──────────────────────────────────────────────────────────────────────
 # Background Tasks & Queue Listeners
@@ -143,6 +150,25 @@ async def on_shutdown():
     if global_harness_instance:
         print("[*] Instructing DSP harness to gracefully terminate worker resources...")
         global_harness_instance.running = False
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Exposed REST Configuration Routes
+# ──────────────────────────────────────────────────────────────────────
+
+@app.post("/api/v1/config/update")
+async def update_runtime_config(config: ConfigUpdate):
+    """
+    High-speed HTTP POST route verifying and injecting dynamic
+    Hardware-in-the-Loop runtime parameters.
+    """
+    if global_harness_instance:
+        global_harness_instance.set_runtime_config(
+            config.detection_threshold,
+            config.antenna_attenuation_db,
+            config.zero_trust_lockout
+        )
+    return {"status": "success", "applied_parameters": config.dict()}
 
 
 # ──────────────────────────────────────────────────────────────────────
