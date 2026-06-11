@@ -46,3 +46,7 @@ ENV/
 data/
 outputs/
 .env
+
+# Developer tools
+graphify-out/
+.agents/
