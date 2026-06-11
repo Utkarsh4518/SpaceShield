@@ -1,36 +1,37 @@
 {
-    "timestamp": "2026-06-09T15:04:00Z",
+    "timestamp": "2026-06-11T18:51:32Z",
     "guideline_compliance": "CERT-In/SIA-India Space Cyber Security Framework (Feb 2026)",
     "facility_id": "IN-GS-KA-01",
     "node_type": "NavIC L5 / S-band SDR Receiver Agent",
     "monitoring_scenario": "JAMMING",
-    "itu_compliance": "VIOLATION",
+    "itu_compliance": "COMPLIANT",
     "glr_status": "ALERT",
     "incident_details": {
-        "threat_detected": true,
-        "threat_category": "JAMMING",
-        "severity_score_pct": 95.0,
+        "threat_detected": false,
+        "threat_category": "NORMAL",
+        "severity_score_pct": NaN,
         "telemetry": {
             "interference_to_noise_db": 22.04,
-            "spectral_flatness": 0.9915,
-            "glr_path_statistic": 741.96,
+            "spectral_flatness": 0.9891,
+            "glr_path_statistic": 845.01,
             "rff_fingerprint": {
-                "cfo": 528402.0,
-                "phase_noise": 50.81802624340334,
-                "iq_amp_imbalance": -0.10287503898143768,
-                "iq_phase_imbalance": 0.3271288275718689
+                "cfo": -601411.9375,
+                "phase_noise": 44.596425827917194,
+                "iq_amp_imbalance": -0.16663403809070587,
+                "iq_phase_imbalance": -0.11742570996284485
             }
         },
         "root_causes": [
-            "Spatial Array HIL: Sphericity Alert=True, METR=0.9971"
+            "Spatial Array HIL: Sphericity Alert=True, METR=0.9979",
+            "Edge-AI: Latency=164.4 us, Provider=CPUExecutionProvider"
         ]
     },
     "compliance_action": {
-        "cert_in_6h_report_required": true,
+        "cert_in_6h_report_required": false,
         "cert_in_reporting_deadline": "6 Hours from Detection",
         "log_retention_period": "180 Days Mandatory",
         "security_certification": "ISO/IEC 27001 & FIPS 140-3 Hardware Compliant"
     },
-    "prev_hash": "d5f3a42a9b200daee331d218b9ffba358d01136bd3d09f7c6c9aa6c6ecd0e04f",
-    "hash": "5303c40e29e0ea7be0f4d45b6f41cbc6633268013738cee56ed992b2a554d5ac"
+    "prev_hash": "5d40fbd9faeddd65ae2bb981e422d1eb6e4c8c02b8beb1a25c0147983b574338",
+    "hash": "aa7030e5aa4d01e4fd492db2e597e48a1b76700ad30da63fb0a58f3dc93a8766"
 }
