@@ -4,7 +4,7 @@
 > *Sovereign signal integrity validation at the terrestrial-RF frontier for satellite communication networks and NavIC navigation.*
 
 > ### Quick Navigation Guide
-> - **Core Simulator (Python)**: [`ackend/src/rf_threat_simulator.py`](backendackend/src/rf_threat_simulator.py)
+> - **Core Simulator (Python)**: [backend/src/rf_threat_simulator.py](backend/src/rf_threat_simulator.py)
 > - **Visual Dashboards**: [Normal Dashboard](outputs/spaceshield_dashboard_normal.png) | [Jamming Dashboard](outputs/spaceshield_dashboard_jamming.png) | [Spoofing Dashboard](outputs/spaceshield_dashboard_spoofing.png)
 > - **Compliance & SBOM**: [CycloneDX SBOM](compliance/sbom.json) | [CERT-In Reports](compliance/) | [180-Day Security Log](data/spaceshield_180day_security.log)
 > - **Strategic Documents**: [TRL 4 HIL Plan](docs/trl4_validation_plan.md) | [MeitY Proposal](docs/MEITY_GRANT_PITCH.md) | [Venture Pitch Deck](docs/PITCH_DECK.md) | [Executive Summary](docs/EXECUTIVE_SUMMARY.md) | [Core Theses](docs/THESES.md)
