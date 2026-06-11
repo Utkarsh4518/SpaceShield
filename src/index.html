@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpaceShield Telemetry HUD</title>
+    <!-- Use Chart.js for hardware-accelerated canvas plotting -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            /* Cyber-defense Dark Theme Palette */
+            --bg-color: #0b1016;
+            --panel-bg: #131b24;
+            --border-color: #212c3a;
+            --text-main: #e6edf3;
+            --text-dim: #7d8590;
+            
+            /* Threat Level Colors */
+            --color-normal: #39d353;
+            --color-jamming: #d29922;
+            --color-spoofing: #f85149;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            height: 100vh;
+            overflow: hidden; /* Prevent scrolling, fixed HUD */
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        /* ──────────────────────────────────────────────────────────────────────
+           THREAT LEVEL HUD
+           ────────────────────────────────────────────────────────────────────── */
+        .hud-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+        }
+
+        .hud-title {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .hud-title h1 {
+            font-size: 24px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        
+        .hud-title span {
+            font-size: 12px;
+            color: var(--text-dim);
+            font-family: monospace;
+            margin-top: 4px;
+        }
+
+        .threat-indicator {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 20px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            border: 2px solid transparent;
+        }
+
+        /* Threat State Animations */
+        @keyframes flash-orange {
+            0%, 100% { background-color: rgba(210, 153, 34, 0.1); border-color: var(--color-jamming); box-shadow: 0 0 10px rgba(210,153,34,0.2); }
+            50% { background-color: rgba(210, 153, 34, 0.3); border-color: var(--color-jamming); box-shadow: 0 0 25px rgba(210,153,34,0.6); }
+        }
+
+        @keyframes flash-red {
+            0%, 100% { background-color: rgba(248, 81, 73, 0.1); border-color: var(--color-spoofing); box-shadow: 0 0 10px rgba(248,81,73,0.2); }
+            50% { background-color: rgba(248, 81, 73, 0.3); border-color: var(--color-spoofing); box-shadow: 0 0 30px rgba(248,81,73,0.8); }
+        }
+
+        .state-normal {
+            color: var(--color-normal);
+            border-color: var(--color-normal);
+            background-color: rgba(57, 211, 83, 0.1);
+        }
+
+        .state-jamming {
+            color: var(--color-jamming);
+            animation: flash-orange 1s infinite;
+        }
+
+        .state-spoofing {
+            color: var(--color-spoofing);
+            animation: flash-red 0.5s infinite;
+        }
+
+        /* ──────────────────────────────────────────────────────────────────────
+           MAIN DASHBOARD GRID
+           ────────────────────────────────────────────────────────────────────── */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 3fr 1fr;
+            grid-template-rows: 1fr;
+            gap: 20px;
+            flex-grow: 1;
+            min-height: 0; /* Important for flex child */
+        }
+
+        .panel {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        .panel-header {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        /* Chart Container Layer Optimization */
+        .chart-container {
+            flex-grow: 1;
+            position: relative;
+            width: 100%;
+            height: 100%;
+            /* Force GPU compositing for canvas rendering */
+            transform: translateZ(0);
+            will-change: transform;
+        }
+
+        /* Micro-Readout Panels */
+        .metrics-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .metric-card {
+            background-color: #0b1016;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: flex-start;
+            flex-grow: 1;
+        }
+
+        .metric-label {
+            font-size: 12px;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .metric-value {
+            font-size: 32px;
+            font-weight: bold;
+            font-family: monospace;
+            color: var(--text-main);
+        }
+
+        .metric-unit {
+            font-size: 14px;
+            color: var(--text-dim);
+            margin-left: 5px;
+        }
+        
+        .metric-status {
+            font-size: 12px;
+            margin-top: 8px;
+            font-weight: 600;
+        }
+        
+        .status-good { color: var(--color-normal); }
+        .status-bad { color: var(--color-spoofing); }
+        
+        #connection-status {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            background-color: var(--border-color);
+            font-family: monospace;
+        }
+
+        .conn-offline { color: var(--color-spoofing); }
+        .conn-online { color: var(--color-normal); }
+
+    </style>
+</head>
+<body>
+
+    <div id="connection-status" class="conn-offline">DISCONNECTED</div>
+
+    <!-- Threat Level HUD -->
+    <header class="hud-header" id="hud-header">
+        <div class="hud-title">
+            <h1>SpaceShield Telemetry Monitor</h1>
+            <span>Ground Station L1 Defense Agent</span>
+        </div>
+        <div class="threat-indicator state-normal" id="threat-indicator">
+            <span id="threat-text">NORMAL</span>
+        </div>
+    </header>
+
+    <!-- Main Content Grid -->
+    <div class="dashboard-grid">
+        
+        <!-- Left: Rolling Statistical Chart -->
+        <div class="panel">
+            <div class="panel-header">Spatiotemporal Detection Matrix (GLRT / FIM)</div>
+            <div class="chart-container">
+                <canvas id="telemetryChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Right: Micro-Readout Panels -->
+        <div class="metrics-stack">
+            <div class="metric-card">
+                <div class="metric-label">FP16 ONNX Inference Latency</div>
+                <div class="metric-value">
+                    <span id="latency-val">0.0</span><span class="metric-unit">µs</span>
+                </div>
+                <div class="metric-status status-good" id="latency-status">ENGINE OPTIMAL</div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="metric-label">Queue Sequence Integrity</div>
+                <div class="metric-value">
+                    <span id="drops-val">0</span><span class="metric-unit">blocks</span>
+                </div>
+                <div class="metric-status status-good" id="drops-status">NO DROPPED BLOCKS</div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="metric-label">Fisher Margin (β)</div>
+                <div class="metric-value">
+                    <span id="fim-val">0.000</span><span class="metric-unit"></span>
+                </div>
+                <div class="metric-status status-good" id="fim-status">SPATIAL STABILITY SECURE</div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        /**
+         * SpaceShield Frontend Client
+         * Zero-dependency native JS worker architecture.
+         */
+
+        // ──────────────────────────────────────────────────────────────────────
+        // Hardware-Accelerated Chart.js Configuration
+        // ──────────────────────────────────────────────────────────────────────
+        
+        const MAX_DATAPOINTS = 50;
+        const ctx = document.getElementById('telemetryChart').getContext('2d');
+        
+        // Setup gradient for Sphericity
+        const sphericityGradient = ctx.createLinearGradient(0, 0, 0, 400);
+        sphericityGradient.addColorStop(0, 'rgba(57, 211, 83, 0.4)');
+        sphericityGradient.addColorStop(1, 'rgba(57, 211, 83, 0.0)');
+        
+        // Setup gradient for FIM Beta
+        const fimGradient = ctx.createLinearGradient(0, 0, 0, 400);
+        fimGradient.addColorStop(0, 'rgba(88, 166, 255, 0.4)');
+        fimGradient.addColorStop(1, 'rgba(88, 166, 255, 0.0)');
+
+        const initialLabels = Array(MAX_DATAPOINTS).fill('');
+        const initialSphericity = Array(MAX_DATAPOINTS).fill(null);
+        const initialFim = Array(MAX_DATAPOINTS).fill(null);
+
+        const telemetryChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: initialLabels,
+                datasets: [
+                    {
+                        label: 'Sphericity Score (Bartlett LLR)',
+                        data: initialSphericity,
+                        borderColor: '#39d353',
+                        backgroundColor: sphericityGradient,
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        fill: true,
+                        tension: 0.2, // Smooth curves
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: 'Fisher Margin β (Eigen-Trace Ratio)',
+                        data: initialFim,
+                        borderColor: '#58a6ff',
+                        backgroundColor: fimGradient,
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        fill: true,
+                        tension: 0.2,
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false, // Disabled to prevent layout thrashing on 100ms updates
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                plugins: {
+                    legend: {
+                        labels: { color: '#7d8590', font: { family: 'monospace', size: 12 } }
+                    },
+                    tooltip: { enabled: false } // Disabled for performance
+                },
+                scales: {
+                    x: {
+                        display: false, // Hide X axis labels for rolling look
+                        grid: { display: false }
+                    },
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        title: { display: true, text: 'GLRT Score', color: '#7d8590' },
+                        grid: { color: 'rgba(33, 44, 58, 0.5)' },
+                        ticks: { color: '#7d8590' },
+                        min: 0
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        title: { display: true, text: 'FIM β', color: '#7d8590' },
+                        grid: { display: false },
+                        ticks: { color: '#7d8590' },
+                        min: 0,
+                        max: 1.05
+                    }
+                }
+            }
+        });
+
+        // ──────────────────────────────────────────────────────────────────────
+        // DOM Element Caching for Fast Render Path
+        // ──────────────────────────────────────────────────────────────────────
+        const elThreatIndicator = document.getElementById('threat-indicator');
+        const elThreatText = document.getElementById('threat-text');
+        const elLatencyVal = document.getElementById('latency-val');
+        const elLatencyStatus = document.getElementById('latency-status');
+        const elDropsVal = document.getElementById('drops-val');
+        const elDropsStatus = document.getElementById('drops-status');
+        const elFimVal = document.getElementById('fim-val');
+        const elFimStatus = document.getElementById('fim-status');
+        const elConnStatus = document.getElementById('connection-status');
+        
+        let lastThreatState = "NORMAL";
+
+        // ──────────────────────────────────────────────────────────────────────
+        // Data Processing & DOM Updates
+        // ──────────────────────────────────────────────────────────────────────
+        
+        function updateDashboard(data) {
+            // 1. Threat Level HUD Processing
+            let currentThreat = data.threat_verdict || "NORMAL";
+            
+            // Map generic SPOOFING to CRITICAL_SPOOFING requirement if needed
+            if (currentThreat.includes("SPOOFING")) {
+                currentThreat = "CRITICAL_SPOOFING";
+            }
+            
+            if (currentThreat !== lastThreatState) {
+                // Clear existing state classes
+                elThreatIndicator.classList.remove('state-normal', 'state-jamming', 'state-spoofing');
+                
+                // Apply new state class
+                if (currentThreat === "NORMAL") {
+                    elThreatIndicator.classList.add('state-normal');
+                    elThreatText.textContent = "NORMAL";
+                } else if (currentThreat === "JAMMING") {
+                    elThreatIndicator.classList.add('state-jamming');
+                    elThreatText.textContent = "JAMMING";
+                } else if (currentThreat === "CRITICAL_SPOOFING") {
+                    elThreatIndicator.classList.add('state-spoofing');
+                    elThreatText.textContent = "CRITICAL_SPOOFING";
+                }
+                lastThreatState = currentThreat;
+            }
+
+            // 2. Micro-Readout Updates
+            const latency = parseFloat(data.inference_latency_us || 0).toFixed(1);
+            elLatencyVal.textContent = latency;
+            if (latency > 4000) {
+                elLatencyStatus.textContent = "HIGH LATENCY (FALLBACK CPU?)";
+                elLatencyStatus.className = "metric-status status-bad";
+            } else {
+                elLatencyStatus.textContent = "ENGINE OPTIMAL (ONNX FP16)";
+                elLatencyStatus.className = "metric-status status-good";
+            }
+
+            const drops = parseInt(data.dropped_blocks || 0);
+            elDropsVal.textContent = drops;
+            if (drops > 0) {
+                elDropsStatus.textContent = "PIPELINE BACKPRESSURE DETECTED";
+                elDropsStatus.className = "metric-status status-bad";
+            } else {
+                elDropsStatus.textContent = "NO DROPPED BLOCKS";
+                elDropsStatus.className = "metric-status status-good";
+            }
+            
+            const fimBeta = parseFloat(data.fim_beta || 0);
+            elFimVal.textContent = fimBeta.toFixed(4);
+            if (fimBeta > 0.9) {
+                elFimStatus.textContent = "WARNING: SPATIAL COLLAPSE";
+                elFimStatus.className = "metric-status status-bad";
+            } else {
+                elFimStatus.textContent = "SPATIAL STABILITY SECURE";
+                elFimStatus.className = "metric-status status-good";
+            }
+
+            // 3. Fast Rolling Chart Update (Zero object allocation)
+            const dsSphericity = telemetryChart.data.datasets[0].data;
+            const dsFim = telemetryChart.data.datasets[1].data;
+            
+            dsSphericity.push(parseFloat(data.sphericity_score || 0));
+            dsSphericity.shift();
+            
+            dsFim.push(fimBeta);
+            dsFim.shift();
+            
+            // Render efficiently bypassing expensive animation frames
+            telemetryChart.update('none');
+        }
+
+        // ──────────────────────────────────────────────────────────────────────
+        // Resilient WebSocket Client
+        // ──────────────────────────────────────────────────────────────────────
+        
+        let ws;
+        const WS_URL = 'ws://127.0.0.1:8000/stream';
+        let reconnectTimeout = null;
+
+        function connectWebSocket() {
+            if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+                return;
+            }
+
+            console.log("[*] Attempting to connect to telemetry stream...");
+            ws = new WebSocket(WS_URL);
+
+            ws.onopen = () => {
+                console.log("[+] Connected to SpaceShield Gateway.");
+                elConnStatus.textContent = "CONNECTED";
+                elConnStatus.className = "conn-online";
+                if (reconnectTimeout) {
+                    clearTimeout(reconnectTimeout);
+                    reconnectTimeout = null;
+                }
+            };
+
+            ws.onmessage = (event) => {
+                try {
+                    const payload = JSON.parse(event.data);
+                    updateDashboard(payload);
+                } catch (e) {
+                    console.error("[!] Failed to parse telemetry frame:", e);
+                }
+            };
+
+            ws.onclose = () => {
+                console.warn("[-] Connection lost. Initiating reconnect loop...");
+                elConnStatus.textContent = "DISCONNECTED";
+                elConnStatus.className = "conn-offline";
+                // Exponential backoff or static 2-second reconnect loop
+                reconnectTimeout = setTimeout(connectWebSocket, 2000);
+            };
+
+            ws.onerror = (err) => {
+                console.error("[!] WebSocket encountered an error.");
+                ws.close(); // Forcing close triggers the reconnect loop
+            };
+        }
+
+        // Initialize the connection on DOM load
+        document.addEventListener('DOMContentLoaded', () => {
+            connectWebSocket();
+        });
+
+    </script>
+</body>
+</html>

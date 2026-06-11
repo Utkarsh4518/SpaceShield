@@ -49,7 +49,7 @@ except ImportError as e:
     sys.exit(1)
 
 class SpatialHardwareHarness:
-    def __init__(self, duration_sec=30, fs=2e6, chunk_size=8192, num_channels=4, playback_file=None, playback_sample_type='float32', playback_endianness='little'):
+    def __init__(self, duration_sec=30, fs=2e6, chunk_size=8192, num_channels=4, playback_file=None, playback_sample_type='float32', playback_endianness='little', telemetry_queue=None):
         """
         Initializes the spatial concurrency HIL harness.
         
@@ -69,6 +69,7 @@ class SpatialHardwareHarness:
         self.playback_file = playback_file
         self.playback_sample_type = playback_sample_type
         self.playback_endianness = playback_endianness
+        self.telemetry_queue = telemetry_queue
         
         # Thread-safe queues
         self.iq_queue = queue.Queue(maxsize=1000)
@@ -462,6 +463,23 @@ class SpatialHardwareHarness:
                     os.makedirs(os.path.dirname(status_path), exist_ok=True)
                 with open(status_path, "w") as hf:
                     json.dump(health_data, hf)
+                    
+                # Bridge telemetry queue for external API consumption
+                if self.telemetry_queue is not None:
+                    payload = {
+                        "sphericity_score": float(sphericity),
+                        "fim_beta": float(metr),
+                        "threat_verdict": str(verdict),
+                        "inference_latency_us": float(avg_infer),
+                        "dropped_blocks": int(drop)
+                    }
+                    if self.telemetry_queue.full():
+                        try:
+                            self.telemetry_queue.get_nowait()
+                        except queue.Empty:
+                            pass
+                    self.telemetry_queue.put_nowait(payload)
+                    
             except Exception:
                 pass
             
