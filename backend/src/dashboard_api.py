@@ -27,6 +27,7 @@ import uvicorn
 from pydantic import BaseModel
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from prometheus_client import make_asgi_app, Histogram, Gauge, Counter
 
 # Ensure sibling imports resolve correctly
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -51,6 +52,28 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount Prometheus Metrics Route
+metrics_app = make_asgi_app()
+app.mount("/metrics", metrics_app)
+
+# ──────────────────────────────────────────────────────────────────────
+# Prometheus Enterprise Telemetry Definitions
+# ──────────────────────────────────────────────────────────────────────
+
+# 1. Execution Latency (Histogram)
+svd_execution_latency_us = Histogram(
+    'spaceshield_svd_latency_us',
+    'Precise execution latency of the SVD equalizer engine in microseconds',
+    buckets=(10.0, 20.0, 30.0, 40.0, 50.0, 75.0, 100.0, float("inf"))
+)
+
+# 2. Eigenvalues & Sphericity Ratios (Gauges)
+glrt_sphericity_ratio = Gauge('spaceshield_glrt_sphericity_ratio', 'Current GLRT sphericity test statistic')
+metr_fim_beta = Gauge('spaceshield_metr_fim_beta', 'Maximum Eigen-Trace Ratio (FIM Beta)')
+
+# 3. Hardware Dropped Blocks (Counter)
+soapy_sdr_overflow_total = Counter('spaceshield_soapy_sdr_overflow_total', 'Total count of hardware ingestion block drops (overflows)')
 
 # ──────────────────────────────────────────────────────────────────────
 # Inter-Process State & Concurrency Vectors
@@ -91,6 +114,17 @@ async def broadcast_telemetry_loop():
                 telemetry_queue.task_done()
         except queue.Empty:
             pass
+
+        if payload:
+            # Update Enterprise Prometheus Metrics (Non-Blocking)
+            if 'inference_latency_us' in payload:
+                svd_execution_latency_us.observe(payload['inference_latency_us'])
+            if 'sphericity_score' in payload:
+                glrt_sphericity_ratio.set(payload['sphericity_score'])
+            if 'fim_beta' in payload:
+                metr_fim_beta.set(payload['fim_beta'])
+            if 'dropped_blocks' in payload and payload['dropped_blocks'] > 0:
+                soapy_sdr_overflow_total.inc(payload['dropped_blocks'])
 
         if payload and active_connections:
             message = json.dumps(payload)

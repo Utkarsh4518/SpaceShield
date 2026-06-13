@@ -1,0 +1,50 @@
+# SpaceShield: Prometheus Enterprise Scraping Manifest
+# Target: 2026 Space Cyber Security Framework Monitoring Standard
+# Classification: SENSITIVE / COMPLIANCE CONFIGURATION
+
+global:
+  scrape_interval: 5s       # High-frequency sweeps to monitor SVD latency spikes
+  evaluation_interval: 10s  # Alert rule evaluation cycle
+  
+  # External labels appended to all time series identifying this edge node
+  external_labels:
+    site_id: "GROUND_STATION_ALPHA"
+    node_tier: "EDGE_INFERENCE"
+
+scrape_configs:
+  # Job for SpaceShield Core Telemetry
+  - job_name: 'spaceshield_dsp_harness'
+    
+    # We scrape slightly aggressively to catch sub-second threshold anomalies
+    scrape_interval: 5s 
+    
+    # Telemetry endpoint mounted via FastAPI and prometheus_client
+    metrics_path: '/metrics'
+    
+    # We disable HTTP TLS checks here as this runs inside the air-gapped container network
+    scheme: 'http'
+
+    static_configs:
+      - targets: ['127.0.0.1:8000'] # FastAPI internal loopback binding
+        labels:
+          component: 'spatial_hardware_harness'
+          environment: 'production'
+
+  # Job for Host Kernel Resources (cAdvisor/Node Exporter)
+  # Ensuring the edge container memory limits (IPC buffers) remain intact
+  - job_name: 'spaceshield_host_node'
+    scrape_interval: 15s
+    static_configs:
+      - targets: ['127.0.0.1:9100']
+        labels:
+          component: 'node_exporter'
+          
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          # Assumes an air-gapped incident manager is running alongside
+          # - alertmanager:9093
+
+# [!] NOTE: To enable custom alert thresholds (e.g. gamma > 50.17 triggers),
+# append `rule_files: [ "spaceshield_alerts.yaml" ]` to this manifest.
