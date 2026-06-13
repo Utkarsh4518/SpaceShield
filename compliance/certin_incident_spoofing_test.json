@@ -1,0 +1,21 @@
+{
+    "timestamp": 1781269870.7108803,
+    "target_frequency_mhz": 1176.45,
+    "sample_rate_msps": 5.0,
+    "evaluation_threshold": 50.17,
+    "incident_results": [
+        {
+            "scenario": "DRAG_OFF_SPOOFING",
+            "trigger_amplitude": 0.19,
+            "max_sphericity": 52.41312789916992,
+            "metr": 0.5836002230644226
+        },
+        {
+            "scenario": "BROADBAND_JAMMING",
+            "trigger_power": -1.0,
+            "max_sphericity": 0.0,
+            "metr": 0.0
+        }
+    ],
+    "containment_status": "VALIDATED_AND_ISOLATED"
+}
