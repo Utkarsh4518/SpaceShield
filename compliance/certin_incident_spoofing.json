@@ -34,7 +34,8 @@
             "security_certification": "ISO/IEC 27001 & FIPS 140-3 Hardware Compliant"
         },
         "prev_hash": "4ade4a1aaf9259290cc472ff5c100c473989a4b6ba92da31d5849030ef7eee09",
-        "hash": "33ccfbb1dff3ebae63ea151a572c11eb5a9ab9c0f9083c78d62d0b883dbab6a9"
+        "hash": "33ccfbb1dff3ebae63ea151a572c11eb5a9ab9c0f9083c78d62d0b883dbab6a9",
+        "previous_hash": "GENESIS_ROOT_000000000000000000000000000000000000000000000000000000"
     },
     {
         "timestamp_iso": "2026-06-16T13:34:46Z",
@@ -50,7 +51,8 @@
             "latency_us": 93.90000195708126,
             "data_strides_dropped": 0,
             "underflow_crashes": 0
-        }
+        },
+        "previous_hash": "67ee837ed67594477e9f1ced19dbc84843c859de825f721d201661ce269773fe"
     },
     {
         "timestamp_iso": "2026-06-16T13:46:37Z",
@@ -67,7 +69,8 @@
             "group_delay_variance_samples": 0.05,
             "latency_us": 67.8000069456175,
             "phase_coherence_pass": true
-        }
+        },
+        "previous_hash": "55352e9be67174866227f90498cdb0f97ba731f1633ba78861697a77d8719cfe"
     },
     {
         "timestamp_iso": "2026-06-16T13:53:21Z",
@@ -85,7 +88,8 @@
             "max_angular_error_deg": 0.0,
             "sweep_latency_us": 14.10000550094992,
             "resolution_pass": true
-        }
+        },
+        "previous_hash": "e3b647c1743b3e7bc34e9cd9d20ce296a34cb4442523f6e60fb7145ea8c90879"
     },
     {
         "timestamp_iso": "2026-06-16T14:01:04Z",
@@ -101,6 +105,85 @@
             "healed_tracking_error_deg": 0.0,
             "execution_latency_us": 5.099995178170502,
             "resolution_pass": true
+        },
+        "previous_hash": "80264961aebfeb3b0583410ceb882d3eb3e75f2d6f293fbfe038cace24e3d521"
+    },
+    {
+        "timestamp_iso": "2026-06-16T15:23:44Z",
+        "event_classification": "EQUALIZER_PRECISION_VERIFICATION",
+        "ls_equalizer_metrics": {
+            "passband_ripple_db": 0.16097107529640198,
+            "execution_latency_us": 35.200006095692515,
+            "precision_pass": true
+        },
+        "sparsity_clamper_metrics": {
+            "induced_isolation_db": 15.0,
+            "execution_latency_us": 3.0999945010989904,
+            "sparsity_pass": true
+        },
+        "previous_hash": "6619f3574dfed3a650be7dc1b00c0398f1362cf89266d7d19cff263aeb647469"
+    },
+    {
+        "timestamp_iso": "2026-06-16T15:40:19Z",
+        "event_classification": "BLIND_SEPARATION_VERIFICATION",
+        "fastica_metrics": {
+            "max_interference_index": 0.0064117288242127556,
+            "execution_latency_us": 30226.599992602132,
+            "isolation_pass": true
+        },
+        "cma_equalizer_metrics": {
+            "recovered_amplitude_variance": 0.005,
+            "execution_latency_us": 58917.90000896435,
+            "convergence_pass": true
+        },
+        "previous_hash": "b2ddeac4e193c9329afa58452b9e22296cd366b055e9cf0d3638251ebdc21766"
+    },
+    {
+        "timestamp_iso": "2026-06-16T15:45:11Z",
+        "event_classification": "RT_JITTER_DETERMINISM_VERIFICATION",
+        "cache_alignment_metrics": {
+            "requested_stride": 4096,
+            "simd_aligned_stride": 4096,
+            "padding_offset_bytes": 32,
+            "is_64_byte_aligned": true
+        },
+        "real_time_execution_metrics": {
+            "test_cycles": 10000,
+            "mean_latency_us": 19.647189977695234,
+            "max_jitter_us": 1.9791428452717879,
+            "registered_page_faults": 0,
+            "registered_thread_migrations": 0,
+            "jitter_pass": true
+        },
+        "previous_hash": "d5002a85268ea84b41bf4694168a5b6ddc065475d42f2380d727350ee72965af"
+    },
+    {
+        "timestamp_iso": "2026-06-16T15:48:40Z",
+        "event_classification": "AIRGAP_CONTAINER_VERIFICATION",
+        "container_boot_metrics": {
+            "image_footprint_mb": 135.4,
+            "cold_start_latency_s": 0.581491473227169,
+            "boot_latency_pass": true
+        },
+        "network_isolation_metrics": {
+            "external_dns_dropped": true,
+            "external_sockets_dropped": true,
+            "airgap_pass": true
+        },
+        "previous_hash": "b4b115c3952855aa3705af0386e014367c0aeb71b6515194855b8d2a72bacbbc"
+    },
+    {
+        "timestamp_iso": "2026-06-16T23:24:58Z",
+        "event_classification": "MASTER_SYSTEM_SIGNOFF",
+        "previous_hash": "30d6e37a546b05c746236ac580ab5333b107fb3d8bf5fccf8341765c8fc5b06c",
+        "certification_status": "INTEGRATION_FAULT",
+        "integration_matrix": {
+            "RT_Thread_Allocator": true,
+            "Cache_Aligned_Memory": true,
+            "Cascading_DSP_Core": true,
+            "Energy_Triage_Swapping": true,
+            "Zero_Knowledge_Prover": true,
+            "WORM_Ledger_Integrity": false
         }
     }
 ]
