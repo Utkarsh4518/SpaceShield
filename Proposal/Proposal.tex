@@ -1,0 +1,252 @@
+\documentclass[11pt,a4paper]{article}
+
+%======================
+% Packages
+%======================
+\usepackage[margin=1in]{geometry}
+\usepackage{setspace}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{multirow}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{fancyhdr}
+\usepackage{amsmath,amssymb}
+\usepackage{caption}
+\usepackage{float}
+
+%======================
+% Formatting
+%======================
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue!50!black,
+    urlcolor=blue!50!black,
+    citecolor=blue!50!black,
+    pdftitle={SpaceShield Strategic Technical Document},
+    pdfauthor={SpaceShield Initiative}
+}
+
+\setstretch{1.15}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.6em}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{SpaceShield Strategic Technical Document}
+\fancyhead[R]{Version 1.1}
+\fancyfoot[C]{\thepage}
+
+\titleformat{\section}{\large\bfseries}{\thesection.}{0.6em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection.}{0.5em}{}
+
+\setlist[itemize]{leftmargin=1.2em, itemsep=0.25em, topsep=0.25em}
+\setlist[enumerate]{leftmargin=1.4em, itemsep=0.25em, topsep=0.25em}
+
+%======================
+% Document
+%======================
+\begin{document}
+
+%======================
+% Title Page
+%======================
+\begin{titlepage}
+    \centering
+    \vspace*{1.5cm}
+    
+    {\LARGE \textbf{SpaceShield}}\\[0.4cm]
+    {\Large Core Problem, Mission, and Market Mandate}\\[0.2cm]
+    {\large Strategic Technical Document}\\[1.0cm]
+    
+    
+    \rule{0.8\textwidth}{0.5pt}\\[0.5cm]
+    {\large Startup Draft}\\[0.2cm]
+    {\normalsize Prepared by the SpaceShield Initiative}\\
+    \rule{0.8\textwidth}{0.5pt}
+    
+    \vfill
+    {\normalsize \today}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+%======================
+\section{Introduction}
+
+Modern space infrastructure has evolved from isolated systems into highly virtualized, cloud-connected, and software-defined networks. As India expands its strategic and commercial space ecosystem under IN-SPACe and related public initiatives, the security of satellite downlinks and terrestrial ground infrastructure is becoming a critical national concern.
+
+Traditional cybersecurity tools are built to protect enterprise software layers such as operating systems, firewalls, and cloud services. They do not inspect the electromagnetic environment or validate raw radio-frequency signals before those signals enter the digital pipeline. This creates a gap at the physical layer, where malicious interference, spoofing, and jamming can affect satellite communications before legacy controls can respond.
+
+SpaceShield addresses this gap by operating at the terrestrial-RF frontier. The platform processes digitized in-phase and quadrature streams at the receiver edge and applies real-time statistical signal processing and machine learning to assess signal integrity before downstream systems consume the data.
+
+%======================
+\section{Core Problem}
+
+SpaceShield is designed to mitigate manipulation and disruption of radio-frequency signals at the terrestrial digitization layer. In modern ground-station and SDR-based architectures, unverified RF streams can allow corrupted telemetry, spoofed navigation data, or malicious signal injections to propagate into operational systems.
+
+The two primary threat vectors addressed by the platform are spoofing and jamming. Spoofing involves counterfeit RF signals designed to resemble legitimate satellite transmissions and can induce false telemetry, position drift, or time-sync errors. Jamming involves deliberate interference that overwhelms legitimate signals and can interrupt communications or break receiver tracking loops.
+
+Conventional monitoring tools can indicate that a signal was lost or degraded, but they generally do not distinguish between routine propagation effects and a coordinated physical-layer attack. SpaceShield is intended to provide real-time detection and classification at the point of ingestion.
+
+\subsection{Threat Classes}
+
+\begin{itemize}
+    \item \textbf{Spoofing:} Counterfeit signals designed to imitate legitimate satellite transmissions.
+    \item \textbf{Jamming:} Intentional interference that disrupts or suppresses valid satellite reception.
+    \item \textbf{Tracking-loop hijacking:} Adversarial drift attacks that gradually pull a receiver away from true signal lock.
+    \item \textbf{Signal degradation:} Ambiguous anomalies that may be environmental, operational, or malicious.
+\end{itemize}
+
+%======================
+\section{Target Users}
+
+The first users of the platform are expected to include strategic government agencies, commercial space operators, and critical infrastructure providers.
+
+For government and defense users, the need is to protect tactical communications, border-surveillance links, and navigation-dependent operations from spoofing and jamming. For commercial operators and GSaaS platforms, the need is to reduce service disruption, protect service-level commitments, and avoid the ground segment becoming an entry point for broader network compromise. For critical infrastructure users such as aviation, maritime, logistics, and timing-sensitive financial systems, the need is to improve trust in signal integrity and reduce operational risk from RF interference and navigation deception.
+
+The commercial value proposition is strongest where satellite connectivity and timing are mission-critical and where edge-based detection can reduce downtime, incident impact, and response time.
+
+\subsection{Customer Segments}
+
+\begin{itemize}
+    \item \textbf{Strategic government and defense users.}
+    \item \textbf{Commercial space operators and GSaaS platforms.}
+    \item \textbf{Critical infrastructure providers.}
+\end{itemize}
+
+%======================
+\section{Why Now}
+
+Three shifts make this problem especially timely. First, India’s space and navigation ecosystem is placing greater emphasis on NavIC-compatible infrastructure and sovereign capability. Second, ground segments are shifting toward software-defined and virtualized architectures, which makes them easier to scale but also expands the attack surface. Third, geopolitical electronic warfare and GNSS interference have made spoofing and jamming practical, low-cost threats rather than theoretical edge cases.
+
+In parallel, India’s 2026 space cyber security guidance has increased the operational importance of incident logging, reporting, and secure-by-design controls for the space ecosystem. That creates an opening for an edge-native security layer that can help operators detect, triage, and document physical-layer anomalies in real time.
+
+This combination of technological change, regulatory pressure, and threat evolution makes signal integrity a strategic requirement rather than a secondary monitoring function.
+
+%======================
+\section{Mission}
+
+SpaceShield’s mission is to build a software-defined, indigenous cyber-defense layer for satellite communication and navigation networks. The objective is to improve sovereign signal integrity at the terrestrial-RF frontier using edge-deployed detection, validation, and reporting tools.
+
+The platform is built around three principles:
+
+\begin{enumerate}
+    \item \textbf{Indigenous self-reliance:} Core detection IP is developed for India’s strategic and commercial needs.
+    \item \textbf{Low-friction scalability:} The system can be deployed as software on existing receiver infrastructure rather than requiring major hardware redesign.
+    \item \textbf{Zero-trust physical-layer integration:} No signal should be accepted until it has been validated by both hardware-signature and behavioral checks.
+\end{enumerate}
+
+%======================
+\section{Technical Approach}
+
+The current MVP uses two complementary methods. The first is generalized likelihood ratio detection, which monitors deviations in expected signal behavior and is especially suitable for stable satellite geometries such as NavIC GEO/GSO links. The second is radio-frequency fingerprinting, which analyzes transmitter-specific imperfections such as I/Q imbalance, phase noise, and related signal characteristics to support authentication and anomaly detection.
+
+These methods are most effective when combined with receiver-state analytics such as Doppler consistency, code-phase stability, C/N$_0$ behavior, and correlation-shape checks. The goal is not to replace traditional receivers, but to provide an intelligent verification layer before data reaches enterprise or defense applications.
+
+\subsection{Dynamic Energy-Aware DSP Orchestration}
+
+To support deployment at remote or power-constrained sites, SpaceShield will incorporate a Triage-Based Power Management (TBPM) architecture. This layer is intended to improve energy efficiency for terrestrial monitoring operations that may rely on solar-plus-battery systems or other localized backup power sources. By partitioning computational workloads according to mission priority, the framework is expected to reduce baseline energy consumption while preserving the determinism required for signal validation.
+
+The TBPM layer will separate time-critical inference from non-critical processing into two runtime paths. The fast path will be reserved for latency-sensitive signal ingestion and threat classification tasks, ensuring that physical-layer validation remains continuously available for NavIC and related satellite telemetry streams. The slow path will govern non-critical functions such as batch logging, diagnostics, and deferred analytics. During verified low-risk operating windows, the system may reduce SDR ingestion rates, compress logs, or schedule background tasks based on battery state-of-charge (SoC) and available power headroom.
+
+The platform will also be designed to run on low-power edge hardware, including ARM-based systems and other energy-efficient inference accelerators where appropriate. In constrained deployments, this orchestration approach is expected to reduce unnecessary compute overhead and improve operational continuity. The objective is to deliver bounded-latency defense sensing within a sustainable energy envelope.
+
+\subsection{MVP Logic}
+
+\begin{itemize}
+    \item Ingest raw I/Q data from SDR front ends.
+    \item Extract physical-layer features and signal-health indicators.
+    \item Score the stream using GLR and RFF-based models.
+    \item Classify normal, jammed, spoofed, or anomalous conditions.
+    \item Generate alerts and structured event logs for operator review.
+\end{itemize}
+
+%======================
+\section{Regulatory Alignment}
+
+SpaceShield is being designed to align with India’s evolving space cyber security expectations, including secure logging, incident reporting support, access control, and forensic traceability. The system architecture supports long-term audit retention and structured reporting workflows suitable for regulated ground-station environments.
+
+The platform also takes ITU-R receiver-protection principles into account for navigation-satellite service operation in the 1215--1300 MHz band. This is relevant to designing interference-aware detection logic for NavIC-adjacent and other RNSS use cases.
+
+This regulatory framing should be presented as alignment and support, not as a claim of automatic legal compliance across all operator categories.
+
+\subsection{Compliance-Oriented Design Goals}
+
+\begin{itemize}
+    \item Incident logging and traceability.
+    \item Secure configuration and access control.
+    \item Support for reporting workflows.
+    \item Forensic retention and audit readiness.
+    \item Receiver protection awareness for RNSS bands.
+\end{itemize}
+
+%======================
+\section{Roadmap}
+
+Phase 1 focuses on research and simulation, using synthetic I/Q streams to verify the behavior of GLR and RF fingerprinting models under normal, jamming, and spoofing conditions. Phase 2 moves to hardware-in-the-loop validation using SDR hardware and live or emulated satellite signals. Phase 3 targets pilot deployment with an early commercial or defense partner for live-link monitoring and operational feedback.
+
+The near-term objective is to demonstrate technical validity, latency suitability, and practical integration with receiver pipelines. The longer-term objective is to productize the technology as an edge-AI security layer for protected satellite communications.
+
+\subsection{Development Phases}
+
+\begin{longtable}{p{0.18\textwidth}p{0.26\textwidth}p{0.46\textwidth}}
+\toprule
+\textbf{Phase} & \textbf{Focus} & \textbf{Outcome} \\
+\midrule
+Phase 1 & Research and simulation & Synthetic validation of GLR and RFF models. \\
+Phase 2 & Hardware-in-the-loop & Demonstration on SDR hardware and live/emulated signals. \\
+Phase 3 & Pilot deployment & Field testing with an early commercial or defense partner. \\
+\bottomrule
+\end{longtable}
+
+%======================
+\section{Business Model}
+
+The commercial strategy combines software licensing, recurring subscriptions, and specialized services. The platform can be delivered as an edge-AI agent for on-site receiver integration, as a dashboard for operational visibility, and as a technical assessment offering for security validation.
+
+This structure supports both recurring revenue and high-value professional services, while keeping deployment lightweight for customers with existing SDR or ground-station infrastructure.
+
+\subsection{Offerings}
+
+\begin{table}[H]
+\centering
+\caption{SpaceShield Commercial Offerings}
+\begin{tabularx}{\textwidth}{@{}p{0.28\textwidth}p{0.28\textwidth}p{0.36\textwidth}@{}}
+\toprule
+\textbf{Product} & \textbf{Delivery Model} & \textbf{Revenue Model} \\
+\midrule
+Dashboard & Web-based spectral health and threat intelligence visualizer & Monthly subscription per node \\
+Edge-AI Agent & Containerized software for local SDR integration & Annual software license / recurring contract \\
+Strategic VAPT & Specialized ground-station assessment and validation & Project-based service fee \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+%======================
+\section{Closing Statement}
+
+SpaceShield is intended to provide a sovereign, software-defined layer of physical-layer defense for satellite communication and navigation networks. The platform combines edge inference, signal integrity validation, and structured incident reporting to address an increasingly important operational gap in modern SatCom infrastructure.
+
+The opportunity is strongest where security, resilience, and deployment simplicity must coexist. For India’s space ecosystem, that makes physical-layer security a timely and strategic category.
+
+%======================
+\section*{Appendix: Reviewer-Safe Language Guide}
+
+Use the following phrasing conventions in external documents:
+
+\begin{itemize}
+    \item Use ``designed to align with'' instead of ``fully compliant with''.
+    \item Use ``validated in simulation'' instead of ``mathematically verified'' unless formal proof exists.
+    \item Use ``high detection performance in controlled tests'' instead of fixed accuracy claims unless the dataset and conditions are specified.
+    \item Use ``India’s ecosystem increasingly favors NavIC-compatible infrastructure'' instead of saying adoption is universally mandated.
+    \item Use ``supports incident reporting workflows'' instead of claiming automatic legal compliance.
+\end{itemize}
+
+\end{document}
