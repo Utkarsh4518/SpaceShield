@@ -1,0 +1,6 @@
+numba>=0.58.0
+numpy>=1.24.0
+scipy>=1.11.0
+fastapi>=0.100.0
+uvicorn>=0.23.0
+onnxruntime>=1.16.0

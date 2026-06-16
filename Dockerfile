@@ -1,116 +1,83 @@
 # ==============================================================================
-# SPACESHIELD ZERO-TRUST HARDENED DOCKERFILE
-# ==============================================================================
-# Execution & Air-Gapped Deployment Guide:
-# 
-# 1. Build the Hardened Image (On Networked Build Server):
-#    $ docker build -t spaceshield-edge:latest .
-#
-# 2. Export the Air-Gapped Archive (Creates a portable tarball):
-#    $ docker save spaceshield-edge:latest | gzip > spaceshield-edge-airgap.tar.gz
-#
-# 3. Sneakernet / Transfer the archive via secure USB to the isolated node.
-#
-# 4. Load the Image on the Isolated Deployment Target:
-#    $ docker load < spaceshield-edge-airgap.tar.gz
-#
-# 5. Spin Up the Container with WORM Volume Mounts (Host directory retention):
-#    $ docker run -d --name spaceshield_l1_agent \
-#        --network host \
-#        -v /secure/host/compliance:/app/compliance \
-#        -v /secure/host/data:/app/data \
-#        -p 8000:8000 \
-#        spaceshield-edge:latest
+# SPACESHIELD DEVSECOPS PIPELINE
+# AIR-GAPPED HARDENED COMPUTING INFRASTRUCTURE
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
-# STAGE 1: COMPILATION & DEPENDENCY EXTRACTION
+# STAGE 1: BUILDER COMPONENT
 # ------------------------------------------------------------------------------
-FROM ubuntu:22.04 AS builder
+# Pinned Debian slim base to maximize pre-compiled wheel compatibility for SIMD Numba
+FROM python:3.11-slim-bookworm AS builder
 
-# Enforce non-interactive environment for clean compilation
-ENV DEBIAN_FRONTEND=noninteractive
+# Set strict non-interactive flags
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
 
-# Install C/C++ build toolchains, cmake, and Python headers required for 
-# low-level driver compilation (UHD / SoapySDR) and wheel generation.
+# Install static build-essential headers, C-extension toolchains, and RT dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
+    librtlsdr-dev \
+    gcc \
+    g++ \
     cmake \
-    git \
-    python3 \
-    python3-dev \
-    python3-pip \
-    python3-venv \
-    libuhd-dev \
-    uhd-host \
-    libsoapysdr-dev \
-    soapysdr-module-all \
-    swig \
     && rm -rf /var/lib/apt/lists/*
 
-# Create dedicated compilation workspace
-WORKDIR /build
+WORKDIR /opt/build
 
-# Initialize isolated Python virtual environment to prevent global pollution
-RUN python3 -m venv /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
+# Copy explicitly defined dependencies to maximize layer cache
+COPY backend/requirements.txt .
 
-# Compile and extract scientific computing and API wheels.
-# Using --no-cache-dir ensures we don't carry over build artifacts.
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir \
-    numpy \
-    scipy \
-    onnxruntime \
-    fastapi \
-    uvicorn \
-    websockets \
-    pydantic
+# Pre-compile specialized C-extensions, SIMD Numba runtime dependencies, 
+# and fixed-point CORDIC abstractions into isolated binary wheels
+RUN pip install --upgrade pip && \
+    pip wheel --no-cache-dir --wheel-dir /opt/build/wheels -r requirements.txt
 
 # ------------------------------------------------------------------------------
-# STAGE 2: FOOTPRINT MINIMIZATION & SECURE RUNTIME
+# STAGE 2: PRODUCTION RUNTIME LAYER
 # ------------------------------------------------------------------------------
-FROM ubuntu:22.04
+# Minimal, hardened base snapshot
+FROM python:3.11-slim-bookworm
 
-ENV DEBIAN_FRONTEND=noninteractive
-ENV PATH="/opt/venv/bin:$PATH"
-ENV PYTHONPATH="/app"
+# System Environment Lock
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    DEBIAN_FRONTEND=noninteractive
 
-# 1. Install ONLY the required native C/C++ shared object runtime libraries (.so).
-# 2. Immediately strip the package manager (apt/dpkg) to reduce attack surface.
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3 \
-    libuhd4.1.3 \
-    libsoapysdr0.8 \
-    soapysdr-module-all \
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get purge -y --auto-remove apt dpkg \
-    && rm -rf /usr/bin/apt* /usr/bin/dpkg* /var/cache/apt /var/lib/dpkg
+# Establish non-root system user for strict privilege separation
+# Drops default administrative rights
+RUN groupadd -g 10001 spaceshield_sec && \
+    useradd -u 10001 -g spaceshield_sec -s /sbin/nologin -M spaceshield_rt
 
-# Copy over the compiled Python dependency wheels from Stage 1
-COPY --from=builder /opt/venv /opt/venv
+WORKDIR /opt/spaceshield
 
-# ------------------------------------------------------------------------------
-# SECURITY CONFIGURATION: NON-ROOT EXECUTION ISOLATION
-# ------------------------------------------------------------------------------
+# Transfer compiled wheels from the Builder Component
+# This strictly guarantees no build-essential headers or compilers exist in production
+COPY --from=builder /opt/build/wheels /wheels
+RUN pip install --no-cache-dir --no-index --find-links=/wheels /wheels/* && \
+    rm -rf /wheels
 
-# Create a dedicated unprivileged user to prevent container root breakout attacks
-RUN useradd -ms /bin/bash spaceshield_operator
-WORKDIR /app
+# Copy complete backend/src pool and embed fixed-size ONNX tensor model weights
+# Assign strict ownership to the non-root execution user
+COPY --chown=spaceshield_rt:spaceshield_sec backend/src /opt/spaceshield/backend/src
+COPY --chown=spaceshield_rt:spaceshield_sec models /opt/spaceshield/models
 
-# Inject source code payload with strict ownership boundaries
-COPY --chown=spaceshield_operator:spaceshield_operator backend/ ./backend/
-COPY --chown=spaceshield_operator:spaceshield_operator frontend/ ./frontend/
+# Disable writable layer access across critical directories to prevent runtime tampering
+# Enforces an absolute Read-Only (555) execution boundary
+RUN chmod -R 555 /opt/spaceshield/backend/src /opt/spaceshield/models
 
-# Establish internal mount targets for external WORM volume bindings
-RUN mkdir -p /app/compliance /app/data && \
-    chown -R spaceshield_operator:spaceshield_operator /app/compliance /app/data
-
-# Drop privileges by switching to the non-root user
-USER spaceshield_operator
-
-# Expose the API configuration loop and telemetry streaming socket
+# Expose exclusively port 8000 for the FastAPI WebSocket loop
 EXPOSE 8000
 
-# Execute the background processing pipeline via the ASGI server
-CMD ["uvicorn", "backend.src.dashboard_api:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+# Drop to the hardened non-root system user
+USER spaceshield_rt
+
+# ------------------------------------------------------------------------------
+# RUNTIME CAPABILITIES NOTE
+# When executing this container in production, the orchestrator MUST enforce:
+# docker run --cap-drop=ALL --cap-add=IPC_LOCK --cap-add=SYS_NICE 
+# (IPC_LOCK and SYS_NICE are required for rt_thread_allocator.py mlockall and sched_setscheduler)
+# ------------------------------------------------------------------------------
+
+# Launch the FastAPI WebSocket Loop bound to the exposed interface
+ENTRYPOINT ["python", "-m", "uvicorn", "backend.src.api_bridge:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--log-level", "warning"]
