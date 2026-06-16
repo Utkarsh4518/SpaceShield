@@ -5,6 +5,7 @@ import numpy as np
 import SoapySDR
 from SoapySDR import * # type: ignore
 import queue
+import scipy.signal
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] [SoapyBridge] %(message)s')
@@ -17,6 +18,7 @@ class SoapyReceiverBridge:
     """
     def __init__(self, 
                  target_queue: queue.Queue,
+                 energy_orchestrator = None,
                  freq_mhz: float = 1176.45, # Default to NavIC L5
                  sample_rate_msps: float = 2.0,
                  gain_db: float = 40.0,
@@ -25,6 +27,7 @@ class SoapyReceiverBridge:
                  device_args: dict = {"driver": "rtlsdr"}):
         
         self.target_queue = target_queue
+        self.energy_orchestrator = energy_orchestrator
         self.freq = freq_mhz * 1e6
         self.sample_rate = sample_rate_msps * 1e6
         self.gain = gain_db
@@ -41,6 +44,12 @@ class SoapyReceiverBridge:
         # We allocate a flat array for SoapySDR API, which expects a list of pointers.
         self._buffers = [np.empty(self.chunk_size, dtype=np.complex64) for _ in range(self.num_channels)]
         self._buffer_pointers = [buf for buf in self._buffers]
+        
+        # Power Management Tracking
+        self._current_mode = "NOMINAL_RENEWABLE_MODE"
+        
+        # Pre-allocate static phase-smoothing transition window (Hann curve)
+        self._transition_window = np.hanning(self.chunk_size).astype(np.float32)
         
     def initialize_hardware(self):
         """Bind to the SDR hardware and configure stream parameters."""
@@ -112,6 +121,31 @@ class SoapyReceiverBridge:
         last_time = time.time()
         
         while self.is_running:
+            # 1. TBPM Flag Evaluation
+            decimation_factor = 1
+            active_sample_rate = self.sample_rate
+            
+            if self.energy_orchestrator:
+                tbpm_cfg = self.energy_orchestrator.get_atomic_config()
+                target_mode = tbpm_cfg.get("power_state", "NOMINAL_RENEWABLE_MODE")
+                
+                if target_mode == "CRITICAL_SUSTAINABILITY_MODE":
+                    # Decimate to 1/4 rate (e.g. 4MHz -> 1MHz)
+                    decimation_factor = int(self.sample_rate / tbpm_cfg.get("sdr_ingest_rate_hz", self.sample_rate))
+                    if decimation_factor < 1: decimation_factor = 1
+                    active_sample_rate = self.sample_rate / decimation_factor
+                    
+                    # Dynamically scale CPU loop sleep threshold 
+                    # If we skip processing frames natively in hardware, we sleep to free CPU scheduler
+                    time.sleep(0.001 * decimation_factor)
+                    
+            # Detect operational state shift to trigger phase-smoothing interpolation
+            mode_shifted = False
+            if self.energy_orchestrator and self._current_mode != target_mode:
+                mode_shifted = True
+                self._current_mode = target_mode
+                logger.warning(f"[SDR Bridge] TBPM Transition intercepted! Engaging {self._current_mode} logic.")
+
             # Block until data is available, with a very tight timeout
             sr = self.sdr.readStream(self.rx_stream, self._buffer_pointers, self.chunk_size, timeoutUs=100000)
             
@@ -125,27 +159,35 @@ class SoapyReceiverBridge:
                     logger.error(f"[!] STREAM ERROR CODE: {sr.ret}")
                 continue
             
-            # If we received a partial chunk, we generally skip or handle. 
-            # For coherent spatial processing, we demand a full block.
             if sr.ret != self.chunk_size:
                 logger.warning(f"Sequence Discontinuity: Received partial block ({sr.ret}/{self.chunk_size})")
                 continue
             
-            # Fast-Path: Stack the independent channel arrays into our coherent (4, 8192) shape
-            # To ensure zero-allocation pipeline handoff, we copy the physical view directly 
-            # into a new coherent array payload mapped for the GLRT engine.
+            # Fast-Path: Stack independent channel arrays coherently
             coherent_block = np.vstack(self._buffers)
             
+            # 2. Transition Digital Interpolation Window
+            # If the mode just shifted, apply a continuous Hann smoothing envelope to the block
+            # to gracefully slope the phase transitions and prevent the Carrier Lock PLL from snapping.
+            if mode_shifted:
+                coherent_block *= self._transition_window
+                
+            # 3. Vector Decimation Engine (Zero-Allocation Memory View Extraction)
+            if decimation_factor > 1:
+                # Extract every N-th complex64 sample purely via NumPy memory striding
+                processed_block = coherent_block[:, ::decimation_factor]
+            else:
+                processed_block = coherent_block
+            
             payload = {
-                "iq_data": coherent_block,
+                "iq_data": processed_block,
                 "timestamp": time.time(),
                 "center_freq": self.freq,
-                "sample_rate": self.sample_rate
+                "sample_rate": active_sample_rate
             }
             
             # Push to the synchronized pipeline queue
             try:
-                # Use nowait to ensure ingestion loop is never blocked
                 self.target_queue.put_nowait(payload)
             except queue.Full:
                 logger.warning("Pipeline ingestion queue full. Dropping physical block.")
