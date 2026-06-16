@@ -1,37 +1,106 @@
-{
-    "timestamp": "2026-06-11T19:19:44Z",
-    "guideline_compliance": "CERT-In/SIA-India Space Cyber Security Framework (Feb 2026)",
-    "facility_id": "IN-GS-KA-01",
-    "node_type": "NavIC L5 / S-band SDR Receiver Agent",
-    "monitoring_scenario": "SPOOFING",
-    "itu_compliance": "VIOLATION",
-    "glr_status": "ALERT",
-    "incident_details": {
-        "threat_detected": true,
-        "threat_category": "JAMMING",
-        "severity_score_pct": 100.0,
-        "telemetry": {
-            "interference_to_noise_db": 11.07,
-            "spectral_flatness": 0.1403,
-            "glr_path_statistic": 362.53,
-            "rff_fingerprint": {
-                "cfo": 14897.33203125,
-                "phase_noise": 0.2878333799686254,
-                "iq_amp_imbalance": 0.09085404872894287,
-                "iq_phase_imbalance": -0.24308131635189056
-            }
+[
+    {
+        "timestamp": "2026-06-11T19:19:44Z",
+        "guideline_compliance": "CERT-In/SIA-India Space Cyber Security Framework (Feb 2026)",
+        "facility_id": "IN-GS-KA-01",
+        "node_type": "NavIC L5 / S-band SDR Receiver Agent",
+        "monitoring_scenario": "SPOOFING",
+        "itu_compliance": "VIOLATION",
+        "glr_status": "ALERT",
+        "incident_details": {
+            "threat_detected": true,
+            "threat_category": "JAMMING",
+            "severity_score_pct": 100.0,
+            "telemetry": {
+                "interference_to_noise_db": 11.07,
+                "spectral_flatness": 0.1403,
+                "glr_path_statistic": 362.53,
+                "rff_fingerprint": {
+                    "cfo": 14897.33203125,
+                    "phase_noise": 0.2878333799686254,
+                    "iq_amp_imbalance": 0.09085404872894287,
+                    "iq_phase_imbalance": -0.24308131635189056
+                }
+            },
+            "root_causes": [
+                "Spatial Array HIL: Sphericity Alert=True, METR=0.9498",
+                "Edge-AI: Latency=649.3 us, Provider=CPUExecutionProvider"
+            ]
         },
-        "root_causes": [
-            "Spatial Array HIL: Sphericity Alert=True, METR=0.9498",
-            "Edge-AI: Latency=649.3 us, Provider=CPUExecutionProvider"
-        ]
+        "compliance_action": {
+            "cert_in_6h_report_required": true,
+            "cert_in_reporting_deadline": "6 Hours from Detection",
+            "log_retention_period": "180 Days Mandatory",
+            "security_certification": "ISO/IEC 27001 & FIPS 140-3 Hardware Compliant"
+        },
+        "prev_hash": "4ade4a1aaf9259290cc472ff5c100c473989a4b6ba92da31d5849030ef7eee09",
+        "hash": "33ccfbb1dff3ebae63ea151a572c11eb5a9ab9c0f9083c78d62d0b883dbab6a9"
     },
-    "compliance_action": {
-        "cert_in_6h_report_required": true,
-        "cert_in_reporting_deadline": "6 Hours from Detection",
-        "log_retention_period": "180 Days Mandatory",
-        "security_certification": "ISO/IEC 27001 & FIPS 140-3 Hardware Compliant"
+    {
+        "timestamp_iso": "2026-06-16T13:34:46Z",
+        "event_classification": "NUMERICAL_STABILITY_AUDIT",
+        "cordic_verification": {
+            "max_angular_error_rad": 6.452917310895145e-05,
+            "noise_floor_db": -83.82030648792225,
+            "latency_us": 319.40000189933926,
+            "bit_exact_pass": true
+        },
+        "ew_shock_validation": {
+            "saturation_clamping_active": true,
+            "latency_us": 93.90000195708126,
+            "data_strides_dropped": 0,
+            "underflow_crashes": 0
+        }
     },
-    "prev_hash": "4ade4a1aaf9259290cc472ff5c100c473989a4b6ba92da31d5849030ef7eee09",
-    "hash": "33ccfbb1dff3ebae63ea151a572c11eb5a9ab9c0f9083c78d62d0b883dbab6a9"
-}
+    {
+        "timestamp_iso": "2026-06-16T13:46:37Z",
+        "event_classification": "MULTI_RATE_FILTER_VERIFICATION",
+        "decimator_metrics": {
+            "stopband_attenuation_db": -83.84014892578125,
+            "passband_frequency_hz": 0.05,
+            "jammer_frequency_hz": 0.35,
+            "latency_us": 771.2999940849841,
+            "attenuation_pass": true
+        },
+        "equalizer_metrics": {
+            "max_differential_phase_rad": 0.0016949176788330078,
+            "group_delay_variance_samples": 0.05,
+            "latency_us": 67.8000069456175,
+            "phase_coherence_pass": true
+        }
+    },
+    {
+        "timestamp_iso": "2026-06-16T13:53:21Z",
+        "event_classification": "SPATIAL_FFT_VERIFICATION",
+        "fft_core_metrics": {
+            "double_precision_mse": 2.0634813302500277e-10,
+            "stride_latency_us": 104.29999383632094,
+            "precision_pass": true
+        },
+        "capon_aoa_metrics": {
+            "target_1_azimuth": 25.0,
+            "target_2_azimuth": 28.0,
+            "estimated_1_azimuth": 25.0,
+            "estimated_2_azimuth": 28.0,
+            "max_angular_error_deg": 0.0,
+            "sweep_latency_us": 14.10000550094992,
+            "resolution_pass": true
+        }
+    },
+    {
+        "timestamp_iso": "2026-06-16T14:01:04Z",
+        "event_classification": "SUBSPACE_HEALING_VERIFICATION",
+        "svd_clipper_metrics": {
+            "eigen_drift_error": 1.871674304432247e-08,
+            "execution_latency_us": 9.900002623908222,
+            "precision_pass": true
+        },
+        "manifold_healer_metrics": {
+            "induced_degradation_deg": 30.0,
+            "uncompensated_tracking_error_deg": 12.952539642284613,
+            "healed_tracking_error_deg": 0.0,
+            "execution_latency_us": 5.099995178170502,
+            "resolution_pass": true
+        }
+    }
+]
