@@ -6,6 +6,7 @@ import SoapySDR
 from SoapySDR import * # type: ignore
 import queue
 import scipy.signal
+from rf_frontend_emulator import RfFrontendEmulator
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] [SoapyBridge] %(message)s')
@@ -24,7 +25,8 @@ class SoapyReceiverBridge:
                  gain_db: float = 40.0,
                  num_channels: int = 4,
                  chunk_size: int = 8192,
-                 device_args: dict = {"driver": "rtlsdr"}):
+                 device_args: dict = {"driver": "rtlsdr"},
+                 rf_emulator: RfFrontendEmulator = None):
         
         self.target_queue = target_queue
         self.energy_orchestrator = energy_orchestrator
@@ -34,6 +36,7 @@ class SoapyReceiverBridge:
         self.num_channels = num_channels
         self.chunk_size = chunk_size
         self.device_args = device_args
+        self.rf_emulator = rf_emulator
         
         self.sdr = None
         self.rx_stream = None
@@ -166,6 +169,10 @@ class SoapyReceiverBridge:
             # Fast-Path: Stack independent channel arrays coherently
             coherent_block = np.vstack(self._buffers)
             
+            # Intercept and inject RF frontend impairments in-place if emulator is active
+            if self.rf_emulator is not None:
+                self.rf_emulator.emulate_impairments(coherent_block)
+            
             # 2. Transition Digital Interpolation Window
             # If the mode just shifted, apply a continuous Hann smoothing envelope to the block
             # to gracefully slope the phase transitions and prevent the Carrier Lock PLL from snapping.
@@ -203,9 +210,13 @@ if __name__ == "__main__":
     print("[*] Testing SoapySDR Receiver Bridge Compilation...")
     test_queue = queue.Queue(maxsize=100)
     
-    # Example generic initialization using RTL-SDR or dummy configuration
-    # Note: If no hardware is attached, initialization will gracefully fail here.
-    bridge = SoapyReceiverBridge(target_queue=test_queue, chunk_size=8192)
+    # Instantiate emulator and bridge for testing
+    emulator = RfFrontendEmulator(sample_rate_hz=2.0e6)
+    bridge = SoapyReceiverBridge(
+        target_queue=test_queue, 
+        chunk_size=8192,
+        rf_emulator=emulator
+    )
     try:
         bridge.initialize_hardware()
         bridge.start()
