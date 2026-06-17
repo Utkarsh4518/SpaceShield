@@ -1,0 +1,55 @@
+{
+    "defaultAction": "SCMP_ACT_KILL",
+    "architectures": [
+        "SCMP_ARCH_X86_64",
+        "SCMP_ARCH_X86",
+        "SCMP_ARCH_AARCH64"
+    ],
+    "syscalls": [
+        {
+            "names": [
+                "read",
+                "write",
+                "epoll_wait",
+                "mlockall",
+                "sched_setaffinity",
+                "sched_setscheduler",
+                "socket",
+                "bind",
+                "sendto",
+                "recvfrom",
+                "connect",
+                "accept",
+                "listen",
+                "setsockopt",
+                "getsockopt",
+                "epoll_create1",
+                "epoll_ctl",
+                "munlockall",
+                "sched_getaffinity",
+                "sched_getscheduler",
+                "sched_yield",
+                "openat",
+                "close",
+                "fstat",
+                "lseek",
+                "brk",
+                "mmap",
+                "munmap",
+                "mprotect",
+                "futex",
+                "clone",
+                "clone3",
+                "rt_sigaction",
+                "rt_sigprocmask",
+                "sigaltstack",
+                "getpid",
+                "gettid",
+                "exit",
+                "exit_group"
+            ],
+            "action": "SCMP_ACT_ALLOW",
+            "args": []
+        }
+    ]
+}
