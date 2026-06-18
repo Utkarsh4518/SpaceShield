@@ -14822,5 +14822,118 @@
             "Zero_Knowledge_Prover": true,
             "WORM_Ledger_Integrity": false
         }
+    },
+    {
+        "timestamp_iso": "2026-06-18T08:54:17Z",
+        "event_classification": "CONCURRENT_IPC_SYNC_VERIFICATION",
+        "barrier_performance": {
+            "num_workers": 4,
+            "test_cycles": 5000,
+            "mean_skew_us": 86.99434000000001,
+            "max_skew_us": 1148.5,
+            "compensated_skew_us": 0.9884772417008434,
+            "skew_passed": true
+        },
+        "ipc_bus_performance": {
+            "ring_size": 8192,
+            "total_bytes_allocated": 917568,
+            "header_bytes": 64,
+            "entry_bytes": 112,
+            "mean_write_latency_us": 6.782679908792488,
+            "max_write_latency_us": 2063.1999941542745,
+            "popped_records": 5000,
+            "dropped_records": 0,
+            "duplicate_records": 0,
+            "ipc_passed": true
+        },
+        "execution_histograms": {
+            "wall_time_bins": [
+                458500.0,
+                475790.0,
+                493080.0,
+                510370.0,
+                527660.0,
+                544950.0,
+                562240.0,
+                579530.0,
+                596820.0,
+                614110.0,
+                631400.0
+            ],
+            "wall_time_counts": [
+                2,
+                1,
+                2,
+                2,
+                2,
+                1,
+                0,
+                3,
+                0,
+                3
+            ],
+            "cpu_time_bins": [
+                0.0,
+                1562500.0,
+                3125000.0,
+                4687500.0,
+                6250000.0,
+                7812500.0,
+                9375000.0,
+                10937500.0,
+                12500000.0,
+                14062500.0,
+                15625000.0
+            ],
+            "cpu_time_counts": [
+                15,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                1
+            ]
+        },
+        "bit_allocations": {
+            "BusHeader": {
+                "write_index": "int32 (4B)",
+                "read_index": "int32 (4B)",
+                "ring_size": "int32 (4B)",
+                "magic": "int32 (4B)",
+                "generation": "int32 (4B)",
+                "reserved": "bytes (44B)"
+            },
+            "TelemetryEntry": {
+                "timestamp": "double (8B)",
+                "frame_index": "uint64 (8B)",
+                "latency_decimation_ns": "uint64 (8B)",
+                "latency_clipper_ns": "uint64 (8B)",
+                "latency_music_ns": "uint64 (8B)",
+                "latency_bss_ns": "uint64 (8B)",
+                "overall_latency_ns": "uint64 (8B)",
+                "snr": "float*4 (16B)",
+                "peaks_azimuth": "float*3 (12B)",
+                "peaks_elevation": "float*3 (12B)",
+                "peaks_value": "float*3 (12B)"
+            }
+        }
+    },
+    {
+        "timestamp_iso": "2026-06-18T08:54:41Z",
+        "event_classification": "MASTER_SYSTEM_SIGNOFF",
+        "previous_hash": "30ee9bf5ea35c3ba7fa4d6856ebc74beede26b49fe760d6ca20016c9ce8d5437",
+        "certification_status": "INTEGRATION_FAULT",
+        "integration_matrix": {
+            "RT_Thread_Allocator": true,
+            "Cache_Aligned_Memory": true,
+            "Cascading_DSP_Core": true,
+            "Energy_Triage_Swapping": true,
+            "Zero_Knowledge_Prover": true,
+            "WORM_Ledger_Integrity": false
+        }
     }
 ]
