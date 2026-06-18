@@ -14794,5 +14794,19 @@
             "average_peak_finder_time_us": 120.1654799944663,
             "p99_peak_finder_time_us": 372.10799937383837
         }
+    },
+    {
+        "timestamp_iso": "2026-06-18T08:46:24Z",
+        "event_classification": "MASTER_SYSTEM_SIGNOFF",
+        "previous_hash": "29c09615f08336e33a91b1be4a1f22c634fb1134c15c542d41ea1d0668c00028",
+        "certification_status": "INTEGRATION_FAULT",
+        "integration_matrix": {
+            "RT_Thread_Allocator": true,
+            "Cache_Aligned_Memory": true,
+            "Cascading_DSP_Core": true,
+            "Energy_Triage_Swapping": true,
+            "Zero_Knowledge_Prover": true,
+            "WORM_Ledger_Integrity": false
+        }
     }
 ]
