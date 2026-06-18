@@ -18,9 +18,17 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(os.path.join(BASE_DIR, 'backend', 'src'))
 sys.path.append(os.path.join(BASE_DIR, 'tests'))
 
-from lcmv_nulling_engine import LCMVNullingEngine
-from covariance_conditioner import CovarianceConditioner
-from layer1_attack_simulator import Layer1AttackSimulator
+import importlib
+
+lcmv_module = importlib.import_module('lcmv_nulling_engine')
+LCMVNullingEngine = lcmv_module.LCMVNullingEngine
+
+cov_module = importlib.import_module('covariance_conditioner')
+CovarianceConditioner = cov_module.CovarianceConditioner
+
+sim_module = importlib.import_module('layer1_attack_simulator')
+Layer1AttackSimulator = sim_module.Layer1AttackSimulator
+
 
 class NullDepthVerifier:
     def __init__(self):
@@ -40,10 +48,13 @@ class NullDepthVerifier:
 
     def _commit_to_worm_ledger(self, metrics: dict):
         """Appends the verification pass/fail matrix to the STQC WORM log."""
+        import stat
         metrics["timestamp"] = time.time()
         metrics["incident_type"] = "LCMV_NULL_DEPTH_VERIFICATION"
         
         last_hash = "0000000000000000000000000000000000000000000000000000000000000000"
+        worm_chain = []
+        
         if os.path.exists(self.ledger_path):
             try:
                 with open(self.ledger_path, "r") as f:
@@ -51,28 +62,29 @@ class NullDepthVerifier:
                     if content:
                         parsed = json.loads(content)
                         if isinstance(parsed, list):
-                            last_hash = parsed[-1].get("hash", last_hash)
+                            worm_chain = parsed
+                            if worm_chain:
+                                last_hash = worm_chain[-1].get("hash", worm_chain[-1].get("previous_hash", last_hash))
                         elif isinstance(parsed, dict):
-                            last_hash = parsed.get("hash", last_hash)
-            except json.JSONDecodeError:
-                # Fallback backward NDJSON sweep
-                with open(self.ledger_path, "r") as f:
-                    for line in reversed(f.readlines()):
-                        if line.strip():
-                            try:
-                                last_hash = json.loads(line).get("hash", last_hash)
-                                break
-                            except: pass
-                            
+                            worm_chain = [parsed]
+                            last_hash = parsed.get("hash", parsed.get("previous_hash", last_hash))
+            except Exception:
+                pass
+
         metrics["previous_hash"] = last_hash
         raw_string = json.dumps(metrics, sort_keys=True)
         metrics["hash"] = hashlib.sha256(raw_string.encode('utf-8')).hexdigest()
         
+        worm_chain.append(metrics)
+        
         try:
-            with open(self.ledger_path, "a") as f:
-                f.write(json.dumps(metrics) + "\n")
-        except PermissionError:
-            print("[!] Permission Denied on WORM Ledger. Cannot commit test matrix.")
+            if os.path.exists(self.ledger_path):
+                os.chmod(self.ledger_path, stat.S_IWRITE)
+            with open(self.ledger_path, "w") as f:
+                json.dump(worm_chain, f, indent=4)
+            os.chmod(self.ledger_path, stat.S_IREAD)
+        except Exception as e:
+            print(f"[!] Failed to write to WORM Ledger: {e}")
 
     def run_sweep(self):
         print("================================================================")
