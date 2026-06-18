@@ -74,5 +74,81 @@
             "Zero_Knowledge_Prover": true,
             "WORM_Ledger_Integrity": false
         }
+    },
+    {
+        "timestamp_iso": "2026-06-18T09:10:10Z",
+        "event_classification": "MULTI_APERTURE_ALIGN_SYNTH_VERIFICATION",
+        "aligner_performance": {
+            "num_channels": 4,
+            "stride_length": 4096,
+            "test_cycles": 2000,
+            "final_residual_phase_rad": 0.0025092153345651204,
+            "mean_aligner_latency_us": 27.146700005687308,
+            "compensated_aligner_latency_us": 23.867888284127183,
+            "phase_alignment_passed": true
+        },
+        "synthesizer_performance": {
+            "mrc_combining_gain_db": 6.133686428900139,
+            "target_response": 1.0,
+            "jammer_response": 3.734220399564947e-07,
+            "null_depth_db": -128.55599975585938,
+            "mean_synth_latency_us": 21.185750265431125,
+            "compensated_synth_latency_us": 9.593544657313055,
+            "synthesizer_passed": true
+        },
+        "profiles": {
+            "residual_phase_error_decimated": [
+                0.7281850095945519,
+                0.0019709565265261884,
+                0.0023434933878418063,
+                0.000963603562491776,
+                0.0009954244598356738,
+                0.0008181125492893693,
+                0.0024263122136755225,
+                0.003015780234607734,
+                0.0007466315156869909,
+                0.0006620848973696492,
+                0.001577177865099948,
+                0.0003244885945262156,
+                0.0035338520535917544,
+                0.0009659215974061262,
+                0.0005448323350038448,
+                0.0009000460637234168,
+                0.00019143098687425582,
+                0.0017981541175061176,
+                0.0027771858480560184,
+                0.002865526004252146
+            ],
+            "combining_gain_decimated": [
+                6.250089691862445,
+                6.0173183723073205,
+                6.155580199053058,
+                6.28077483027706,
+                6.10191130803127,
+                6.159799451914335,
+                6.0825165089666875,
+                6.052396586015326,
+                6.005724230690642,
+                6.270393847558948,
+                6.2408516349387835,
+                6.205594341229885,
+                6.28028425054246,
+                6.054593155495528
+            ]
+        }
+    },
+    {
+        "timestamp_iso": "2026-06-18T09:11:38Z",
+        "event_classification": "MASTER_SYSTEM_SIGNOFF",
+        "previous_hash": "a6044d0897df92a9237ab08c84ae07a7eab48ade0cd8e0d0c053e70e91fdea7f",
+        "certification_status": "INTEGRATION_FAULT",
+        "integration_matrix": {
+            "RT_Thread_Allocator": true,
+            "Cache_Aligned_Memory": true,
+            "Cascading_DSP_Core": true,
+            "Energy_Triage_Swapping": true,
+            "Zero_Knowledge_Prover": true,
+            "WORM_Ledger_Integrity": false
+        }
     }
 ]
