@@ -224,21 +224,21 @@ if 'agri_hist_smooth' not in st.session_state:
 
 # SIDEBAR CONTROLS
 st.sidebar.markdown("### SOVEREIGN SATCOM PARAMETERS")
-sat_snr = st.sidebar.slider("Ambient SNR (dB)", -10.0, 30.0, 10.0, 0.1)
-sat_jammer_angle = st.sidebar.slider("Jammer Incident Wavefront Angle (degrees)", -90, 90, -45)
-sat_dynamics = st.sidebar.slider("Target Dynamics Shock (G)", 0.0, 4.0, 0.0, 0.1)
-sat_gamma = st.sidebar.slider("Chi-Squared Threshold Override (gamma)", 10.0, 150.0, 50.0, 0.1)
+sat_snr = st.sidebar.slider("Ambient SNR (dB)", -10.0, 30.0, 10.0, 0.1, help="Simulates specific Layer-1 electronic warfare attacks. Sets raw mathematical matrix parameters to challenge the core filtering loops.")
+sat_jammer_angle = st.sidebar.slider("Jammer Incident Wavefront Angle (degrees)", -90, 90, -45, help="Angle of arrival for simulated hostile jammer wavefront relative to boresight. Drives spatial covariance matrix distortion.")
+sat_dynamics = st.sidebar.slider("Target Dynamics Shock (G)", 0.0, 4.0, 0.0, 0.1, help="Simulates sudden high-dynamic acceleration steps (up to 4G) to stress-test the Kalman tracking flywheel loop stability.")
+sat_gamma = st.sidebar.slider("Chi-Squared Threshold Override (gamma)", 10.0, 150.0, 50.0, 0.1, help="Adjusts the statistical decision boundary (gamma) for threat classification metrics. Lower bounds yield tighter defense posture but increase false alarm likelihood.")
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("### EV FLEET PARAMETERS")
-ev_temp = st.sidebar.slider("Local Pack Temperature (C)", 20.0, 60.0, 45.0, 0.1)
-ev_voltage_noise = st.sidebar.slider("Cell Voltage Noise Variance", 0.0, 0.5, 0.1, 0.01)
-ev_token = st.sidebar.text_input("Chassis Authorization Token", "123456")
+ev_temp = st.sidebar.slider("Local Pack Temperature (C)", 20.0, 60.0, 45.0, 0.1, help="Simulates ambient pack temperature under extreme Indian summer profiles. Exceeding 48.0 C triggers charging current attenuation.")
+ev_voltage_noise = st.sidebar.slider("Cell Voltage Noise Variance", 0.0, 0.5, 0.1, 0.01, help="Injects measurement noise into the cell voltage CAN bus readings to stress the NLMS impedance tracking filter.")
+ev_token = st.sidebar.text_input("Chassis Authorization Token", "123456", help="Simulates an ECDSA/RSA cryptographic handshake between the battery pack and the vehicle chassis. If severed or unauthenticated, the engine commands a hardware-level contactor relay lockout.")
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("### AGRITECH PARAMETERS")
-agri_fault = st.sidebar.checkbox("Simulate Telemetry Sensor Fault")
-agri_vpd_spike = st.sidebar.slider("VPD Volatility Spike Magnitude", 0.0, 20.0, 0.0, 0.1)
+agri_fault = st.sidebar.checkbox("Simulate Telemetry Sensor Fault", help="Drops the raw sensor stream to zero, forcing the Kalman tracking flywheel into pure state extrapolation mode.")
+agri_vpd_spike = st.sidebar.slider("VPD Volatility Spike Magnitude", 0.0, 20.0, 0.0, 0.1, help="Injects a sudden Vapor Pressure Deficit transient spike to test the alpha-beta-gamma loop clamping response.")
 
 st.sidebar.markdown("---")
 run_live_stream = st.sidebar.checkbox("Execute Continuous Telemetry Stream", value=True)
@@ -289,10 +289,10 @@ st.session_state.agri_hist_smooth.pop(0)
 with tab1:
     st.markdown("### Core Tactical Dashboard Grid")
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric("SVD Calibration Latency", "~24.40 µs")
-    col2.metric("ONNX Inference Stride", "~199.72 µs")
-    col3.metric("Baseband Cycle Execution", "~19.60 µs")
-    col4.metric("Track Error Bound", "0.0120 chips")
+    col1.metric("SVD Calibration Latency", "~24.40 µs", help="Measures the time taken to compute Blind Singular Value Decomposition (SVD) for 4-channel antenna phase alignment. Baseline target is < 25 microseconds.")
+    col2.metric("ONNX Inference Stride", "~199.72 µs", help="Total execution time for the FP16 ONNX neural inference engine performing RF fingerprint classification per stride.")
+    col3.metric("Baseband Cycle Execution", "~19.60 µs", help="Total execution time for the integrated Early-Minus-Late (EML) PRN code synthesizer and multi-state Kalman loop covariance projection.")
+    col4.metric("Track Error Bound", "0.0120 chips", help="Monitors the Generalized Likelihood Ratio Test (GLRT) Sphericity score. Toggles from Green (Normal) to Red (Critical) if multi-antenna spatial anomalies indicate incoming wave collapse.")
     
     st.markdown("---")
     st.markdown("### Multi-Antenna Spatial Mitigation Matrix")
@@ -321,6 +321,7 @@ with tab1:
 with tab2:
     st.markdown("### Edge-AI Battery Health Passport")
     st.markdown("Modeling individual cell voltage inputs and local pack temperatures to track Internal DC Resistance ($R_{dc}$) strictly on the edge.")
+    st.caption("DC Resistance Monitor: Tracks non-linear impedance relaxation curves calculated via an inline, zero-heap Normalized Least Mean Squares (NLMS) filter under extreme ambient Indian summer profiles (45 C+).")
     
     if ev_temp >= 48.0:
         professional_alert(f"THERMAL ALERT: Local cell temperature reading {ev_temp:.1f} C exceeds 48.0 C maximum. Charging current attenuated.", "error")
@@ -334,6 +335,7 @@ with tab2:
     
     st.markdown("---")
     st.markdown("### Asymmetric Hardware Authentication Sequence")
+    st.caption("Security Key Status: Simulates an ECDSA/RSA cryptographic handshake between the battery pack and the vehicle chassis. If severed or unauthenticated, the engine commands a hardware-level contactor relay lockout.")
     expected_hash = "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"
     computed_hash = hashlib.sha256(ev_token.encode('utf-8')).hexdigest()
     
@@ -349,6 +351,8 @@ with tab2:
 with tab3:
     st.markdown("### Volatility-Isolated Transpiration Loop")
     st.markdown("A continuous time-series model demonstrating the alpha-beta-gamma Kalman tracking flywheel smoothing sensor noise and intercepting localized agricultural anomalies before downstream drip irrigation loops suffer failure.")
+    st.caption("VPD Drift Monitor: Tracks atmospheric thermodynamic variables using an alpha-beta-gamma Kalman tracking loop filter. Strips away localized sensor degradation and fields telemetry noise variables.")
+    st.caption("Irrigation Relay Mitigation: Automated variable-rate actuator loop status. Flags anomalous drift variations to save downstream hydroponic systems from telemetry spoofing or hardware sensor failure.")
     
     if agri_fault:
         professional_alert("TELEMETRY FAULT: Raw sensor stream lost. Kalman filter extrapolating state.", "error")
