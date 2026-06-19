@@ -1,6 +1,9 @@
 # SpaceShield
 **Sovereign Deep-Tech Edge Processing Engine**
 
+🚀 **[Launch SpaceShield Interactive Simulator](https://spaceshield.streamlit.app/)**  
+*An interactive, zero-allocation multi-industry edge architecture simulator demonstrating real-time SatCom spatial threat nulling, EV battery impedance tracking, and Agritech anomaly isolation.*
+
 SpaceShield is an air-gapped, zero-allocation edge processing matrix designed to neutralize high-dynamic anomalies across highly critical sectors. The system operates natively in parallel, eliminating latency and ensuring total spectrum, thermal, and fluid autonomy without relying on external cloud topologies.
 
 ## Active Intelligence Domains
