@@ -363,42 +363,16 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # =====================================================================
-# ANTENNA ARRAY PROCESSING PIPELINE SCHEMATIC
+# SATELLITE CONSTELLATION VISUAL ASSET
 # =====================================================================
-st.markdown("### 4-Channel Spatiotemporal Array Processing Pipeline")
-
-st.markdown("""
-<div class="schematic-block">
-                          SPACESHIELD 4-CHANNEL MULTI-ANTENNA PROCESSING PIPELINE
-   ========================================================================================
-
-   RF FRONT-END                    BASEBAND DSP CORE                      DECISION ENGINE
-   -----------                    -----------------                      ---------------
-
-   ANT-0 ──[LNA]──[ADC]──┐
-                          │
-   ANT-1 ──[LNA]──[ADC]──┼──[CACHE STRIDE     ]──[SATURATION   ]──[FRACTIONAL  ]──┐
-                          │  [ ALIGNER          ]  [ INVERTER    ]  [ DELAY SYNC ]  │
-   ANT-2 ──[LNA]──[ADC]──┤  [4x1024 complex64  ]  [Memory Poly  ]  [Parabolic   ]  │
-                          │  [Zero-copy stride   ]  [Odd-order    ]  [Interpolator]  │
-   ANT-3 ──[LNA]──[ADC]──┘  [alignment @22us    ]  [inversion    ]  [@15us/stride]  │
-                                                                                     │
-                          ┌──────────────────────────────────────────────────────────┘
-                          │
-                          v
-                   [MVDR BEAMFORMER ]──[PRN CODE     ]──[KALMAN LOOP  ]──[GLRT         ]
-                   [4x4 R_inv       ]  [ SYNTHESIZER ]  [ FILTER      ]  [ DETECTOR    ]
-                   [Spatial nulling  ]  [EML Replica  ]  [Alpha-Beta-  ]  [Bartlett     ]
-                   [below -45dB     ]  [Generation   ]  [Gamma 3-state]  [Sphericity   ]
-                   [@12us/stride    ]  [@15us/stride  ]  [@8us/stride  ]  [Score Output ]
-                                                                                     │
-                          ┌──────────────────────────────────────────────────────────┘
-                          │
-                          v
-                   [THREAT VERDICT: NORMAL / JAMMING / CRITICAL SPOOFING]
-                   [WORM COMPLIANCE LOG @ compliance/certin_incident_spoofing.json]
-</div>
-""", unsafe_allow_html=True)
+import os as _os
+_image_path = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "satellite_banner.png")
+if _os.path.exists(_image_path):
+    st.markdown("""
+    <div style="background: rgba(11, 17, 30, 0.85); border: 1px solid rgba(0, 229, 255, 0.15); border-radius: 6px; padding: 8px; margin-bottom: 1rem; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);">
+    """, unsafe_allow_html=True)
+    st.image(_image_path, use_container_width=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 # =====================================================================
 # MATH SIMULATION EXECUTION
