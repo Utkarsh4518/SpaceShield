@@ -5,6 +5,196 @@ import hashlib
 
 st.set_page_config(page_title="SpaceShield Simulator", layout="wide", initial_sidebar_state="expanded")
 
+# SOVEREIGN COMMAND CONSOLE CSS INJECTION
+st.markdown("""
+<style>
+    /* ================================================================
+       COMMAND VACUUM BACKGROUND IMPLEMENTATION
+       Deep aerospace dark palette with spatiotemporal radar grid overlay
+       ================================================================ */
+    .stApp {
+        background-color: #0b111e;
+        background-image:
+            linear-gradient(rgba(0, 229, 255, 0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0, 229, 255, 0.03) 1px, transparent 1px);
+        background-size: 30px 30px;
+    }
+
+    /* ================================================================
+       SIDEBAR TACTICAL PARAMETER CONSOLE
+       ================================================================ */
+    section[data-testid="stSidebar"] {
+        background-color: #080e1a;
+        border-right: 1px solid rgba(0, 229, 255, 0.12);
+    }
+
+    section[data-testid="stSidebar"] .stMarkdown h3 {
+        color: #00e5ff;
+        font-family: 'Courier New', Monaco, monospace;
+        font-size: 0.8rem;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        border-bottom: 1px solid rgba(0, 229, 255, 0.15);
+        padding-bottom: 6px;
+    }
+
+    section[data-testid="stSidebar"] label {
+        color: #8899aa;
+        font-family: 'Courier New', Monaco, monospace;
+        font-size: 0.75rem;
+    }
+
+    /* ================================================================
+       PREMIUM GLASSMORPHIC CONTAINER OVERHAULS
+       Metric blocks, columns, tab panels
+       ================================================================ */
+    div[data-testid="stMetric"] {
+        background: rgba(16, 26, 48, 0.75);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(0, 229, 255, 0.15);
+        border-radius: 6px;
+        padding: 14px 16px;
+    }
+
+    div[data-testid="stMetric"] label {
+        color: #8899aa;
+        font-family: 'Courier New', Monaco, monospace;
+        font-size: 0.7rem;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+    }
+
+    div[data-testid="stMetric"] div[data-testid="stMetricValue"] {
+        color: #00e5ff;
+        font-family: 'Courier New', Monaco, monospace;
+        font-weight: 800;
+        font-size: 1.4rem;
+    }
+
+    /* ================================================================
+       TAB PANEL STYLING
+       Neon active state, muted inactive state
+       ================================================================ */
+    div[data-testid="stTabs"] button[data-baseweb="tab"] {
+        background: rgba(16, 26, 48, 0.5);
+        border: 1px solid rgba(0, 229, 255, 0.1);
+        border-radius: 4px 4px 0 0;
+        color: #667788;
+        font-family: 'Courier New', Monaco, monospace;
+        font-size: 0.75rem;
+        letter-spacing: 0.5px;
+        padding: 10px 16px;
+    }
+
+    div[data-testid="stTabs"] button[aria-selected="true"] {
+        background: rgba(0, 229, 255, 0.08);
+        border-bottom: 2px solid #00e5ff;
+        color: #00e5ff;
+        font-weight: 700;
+    }
+
+    div[data-testid="stTabs"] div[data-testid="stTabContent"] {
+        background: rgba(16, 26, 48, 0.4);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border: 1px solid rgba(0, 229, 255, 0.08);
+        border-top: none;
+        border-radius: 0 0 6px 6px;
+        padding: 1.5rem;
+    }
+
+    /* ================================================================
+       GLOBAL TYPOGRAPHY OVERRIDES
+       Force monospaced telemetry font across all heading and body text
+       ================================================================ */
+    .stApp h1 {
+        color: #00e5ff;
+        font-family: 'Courier New', Monaco, monospace;
+        font-weight: 800;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        font-size: 1.6rem;
+    }
+
+    .stApp h3 {
+        color: #ff5505;
+        font-family: 'Courier New', Monaco, monospace;
+        font-weight: 700;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        font-size: 0.95rem;
+        border-bottom: 1px solid rgba(255, 85, 5, 0.2);
+        padding-bottom: 8px;
+    }
+
+    .stApp p, .stApp span, .stApp div {
+        color: #c0ccdd;
+    }
+
+    .stApp .stMarkdown p {
+        font-family: 'Courier New', Monaco, monospace;
+        font-size: 0.82rem;
+        line-height: 1.6;
+        color: #8899aa;
+    }
+
+    /* ================================================================
+       CHART CONTAINER BORDER TREATMENT
+       ================================================================ */
+    div[data-testid="stVegaLiteChart"] {
+        background: rgba(8, 14, 30, 0.6);
+        border: 1px solid rgba(0, 229, 255, 0.1);
+        border-radius: 6px;
+        padding: 8px;
+    }
+
+    /* ================================================================
+       HORIZONTAL RULE OVERRIDE
+       ================================================================ */
+    .stApp hr {
+        border-color: rgba(0, 229, 255, 0.1);
+    }
+
+    /* ================================================================
+       LaTeX BLOCK CONTAINER
+       ================================================================ */
+    div[data-testid="stLatex"] {
+        background: rgba(16, 26, 48, 0.6);
+        border: 1px solid rgba(0, 229, 255, 0.12);
+        border-radius: 6px;
+        padding: 16px;
+        margin: 10px 0;
+    }
+
+    /* ================================================================
+       TEXT INPUT AND SLIDER OVERRIDES
+       ================================================================ */
+    .stSlider label, .stTextInput label, .stCheckbox label {
+        color: #8899aa;
+        font-family: 'Courier New', Monaco, monospace;
+        font-size: 0.75rem;
+    }
+
+    /* ================================================================
+       MOBILE RESPONSIVE SCALING
+       ================================================================ */
+    @media (max-width: 768px) {
+        .stApp h1 {
+            font-size: 1.1rem;
+            letter-spacing: 1px;
+        }
+        div[data-testid="stMetric"] div[data-testid="stMetricValue"] {
+            font-size: 1.1rem;
+        }
+        div[data-testid="stTabs"] button[data-baseweb="tab"] {
+            font-size: 0.6rem;
+            padding: 8px 10px;
+        }
+    }
+</style>
+""", unsafe_allow_html=True)
+
 def professional_alert(message, level="info"):
     colors = {
         "info": ("#58a6ff", "rgba(88, 166, 255, 0.1)"),
