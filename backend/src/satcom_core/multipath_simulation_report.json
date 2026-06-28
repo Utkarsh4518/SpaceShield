@@ -1,0 +1,14 @@
+{
+  "clean_sky": {
+    "mean_gain_db": 3.070583060483775e-08,
+    "std_gain_db": 6.617444900424222e-24
+  },
+  "mild_multipath": {
+    "mean_gain_db": 1.0430781170516095,
+    "std_gain_db": 0.14605065751272156
+  },
+  "severe_multipath": {
+    "mean_gain_db": 0.9693518671886513,
+    "std_gain_db": 2.1304539277183356
+  }
+}
