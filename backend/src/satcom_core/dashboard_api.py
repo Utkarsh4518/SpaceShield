@@ -33,6 +33,7 @@ from prometheus_client import make_asgi_app, Histogram, Gauge, Counter
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from spatial_hardware_harness import SpatialHardwareHarness
+from telemetry_dispatcher import TelemetryDispatcher
 
 # ──────────────────────────────────────────────────────────────────────
 # API Initialization & Configuration
@@ -82,6 +83,9 @@ soapy_sdr_overflow_total = Counter('spaceshield_soapy_sdr_overflow_total', 'Tota
 # Thread-safe queue interconnect for intercepting operational metrics from the harness
 telemetry_queue = queue.Queue(maxsize=100)
 
+# Global priority telemetry dispatcher for separate client WebSocket pipelines
+dispatcher = TelemetryDispatcher(queue_capacity=50, version=1)
+
 # Global register of active WebSocket client connections
 active_connections: Set[WebSocket] = set()
 
@@ -101,8 +105,8 @@ class ConfigUpdate(BaseModel):
 async def broadcast_telemetry_loop():
     """
     Background thread-safe queue listener that intercepts operational metrics.
-    Ingests processed frame indicators, formats them into structured JSON payloads,
-    and broadcasts them over active WebSocket connections every 100ms.
+    Ingests processed frame indicators, updates Prometheus metrics,
+    and broadcasts them to client priority queues every 100ms.
     """
     print("[+] Background telemetry broadcaster initialized.")
     while True:
@@ -126,18 +130,8 @@ async def broadcast_telemetry_loop():
             if 'dropped_blocks' in payload and payload['dropped_blocks'] > 0:
                 soapy_sdr_overflow_total.inc(payload['dropped_blocks'])
 
-        if payload and active_connections:
-            message = json.dumps(payload)
-            # Gather all send coroutines; handle disconnected clients safely
-            coros = [client.send_text(message) for client in active_connections]
-            # Use return_exceptions=True to prevent one broken pipe from taking down the loop
-            results = await asyncio.gather(*coros, return_exceptions=True)
-            
-            for client, result in zip(list(active_connections), results):
-                if isinstance(result, Exception):
-                    # Graceful drop mechanic for stale or crashed connections
-                    print(f"[-] Dropping stale client connection: {result}")
-                    active_connections.discard(client)
+            # Broadcast to priority client queues asynchronously
+            await dispatcher.broadcast(payload)
         
         # Enforce exactly 100ms broadcast interval
         await asyncio.sleep(0.1)
@@ -220,21 +214,37 @@ async def telemetry_stream(websocket: WebSocket):
     - dropped_blocks
     """
     await websocket.accept()
-    active_connections.add(websocket)
-    client_ip = websocket.client.host if websocket.client else "Unknown"
-    print(f"[+] Client {client_ip} connected to high-throughput telemetry stream.")
+    client_id = f"{websocket.client.host}:{websocket.client.port}" if websocket.client else str(time.time())
+    await dispatcher.register_client(client_id)
+    print(f"[+] Client {client_id} connected to high-throughput priority telemetry stream.")
+    
+    # Asynchronous send loop task for this client
+    async def send_loop():
+        try:
+            client_queue = dispatcher.clients.get(client_id)
+            if not client_queue:
+                return
+            while True:
+                payload = client_queue.pop()
+                if payload:
+                    await websocket.send_text(json.dumps(payload))
+                await asyncio.sleep(0.05) # Poll client queue every 50ms
+        except Exception as e:
+            print(f"[-] Telemetry connection send loop terminated for {client_id}: {e}")
+
+    send_task = asyncio.create_task(send_loop())
     
     try:
         while True:
-            # Maintain socket heartbeat and listen for deliberate disconnect events
-            # We don't expect data from the client, just keeping the connection active
+            # Keep socket alive and monitor disconnection events
             await websocket.receive_text()
     except WebSocketDisconnect:
-        print(f"[-] Client {client_ip} gracefully disconnected.")
+        print(f"[-] Client {client_id} gracefully disconnected.")
     except Exception as e:
-        print(f"[!] WebSocket socket panic detected for {client_ip}: {e}")
+        print(f"[!] WebSocket socket panic detected for {client_id}: {e}")
     finally:
-        active_connections.discard(websocket)
+        send_task.cancel()
+        await dispatcher.unregister_client(client_id)
 
 
 # ──────────────────────────────────────────────────────────────────────
