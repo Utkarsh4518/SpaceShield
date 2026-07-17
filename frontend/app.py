@@ -541,5 +541,46 @@ active_scenario = st.query_params.get("scenario", "nominal")
 st.markdown("---")
 
 # =====================================================================
+# [D] LIVE TELEMETRY GRID
+# =====================================================================
+st.markdown("### Live Telemetry Grid")
+d_col1, d_col2, d_col3, d_col4, d_col5 = st.columns(5)
+d_col1.metric(
+    "Sphericity LLR",
+    f"{current_sphericity:.2f}",
+    delta=f"{delta_sphericity:+.2f}",
+    delta_color="inverse",
+    help="Bartlett-corrected log-likelihood ratio test statistic. Values exceeding the gamma threshold indicate structured spatial interference."
+)
+d_col2.metric(
+    "METR (λ_max/Tr)",
+    f"{current_metr:.4f}",
+    delta=f"{delta_metr:+.4f}",
+    delta_color="inverse",
+    help="Maximum Eigenvalue to Trace Ratio. Isotropic noise → 0.25. Single directional source → 1.0. Values above 0.5 indicate rank-1 spatial coherence."
+)
+d_col3.metric(
+    "Inference Latency",
+    f"{sim_inference_latency:.1f} µs",
+    delta=f"{delta_latency:+.1f} µs",
+    delta_color="inverse",
+    help="ONNX Runtime FP16 classification execution time per stride. Target: < 200 µs."
+)
+d_col4.metric(
+    "Threat Verdict",
+    threat_verdict,
+    help="Active neural network threat classification output."
+)
+d_col5.metric(
+    "Dropped Blocks",
+    f"{sim_dropped_blocks}",
+    delta=f"{delta_dropped:+d}" if delta_dropped != 0 else None,
+    delta_color="inverse",
+    help="Cumulative count of processing pipeline buffer overflows. Non-zero values indicate the system cannot keep up with ingestion rate."
+)
 
-st.info("Live telemetry grid loading...")
+st.markdown("---")
+
+# =====================================================================
+
+st.info("Signal integrity visual components loading...")
