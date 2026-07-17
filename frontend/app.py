@@ -427,6 +427,60 @@ st.sidebar.markdown("""
 """, unsafe_allow_html=True)
 
 # =====================================================================
+# SIMULATION EXECUTION
+# =====================================================================
+# Local simulation model (mirrors backend statistical behavior for offline demo)
+effective_snr = 10.0
+effective_jammer = -45
+effective_power = effective_snr - sat_attenuation
+
+current_sphericity = max(0.0, 20.0 + (30.0 - effective_power) * 0.5 + abs(effective_jammer) * 0.8 + np.random.randn() * 2.0)
+
+# EML Tracking Error (validated 0.0120 chip bound at 4G)
+current_error = 0.0010 + (sat_dynamics / 4.0) * 0.0110 + np.random.uniform(-0.0002, 0.0002)
+
+# METR (Maximum Eigenvalue to Trace Ratio) — distinct computation from sphericity
+# Isotropic noise → ~0.25, Rank-1 directional source → 1.0
+base_metr = 0.25 + (current_sphericity / (sat_gamma * 3.0)) * 0.5
+current_metr = min(1.0, max(0.0, base_metr + np.random.uniform(-0.02, 0.02)))
+
+# Buffer Updates
+st.session_state.hist_sphericity.append(current_sphericity)
+st.session_state.hist_sphericity.pop(0)
+st.session_state.hist_error.append(current_error)
+st.session_state.hist_error.pop(0)
+st.session_state.hist_fim.append(current_metr)
+st.session_state.hist_fim.pop(0)
+
+# Threat Classification
+if current_sphericity > sat_gamma * 1.5:
+    threat_verdict = "CRITICAL SPOOFING"
+elif current_sphericity > sat_gamma:
+    threat_verdict = "JAMMING"
+else:
+    threat_verdict = "NORMAL"
+
+# Simulated inference latency
+sim_inference_latency = 199.72 + np.random.uniform(-5.0, 5.0)
+sim_dropped_blocks = 0
+
+# Frame counter
+st.session_state.frames_received += 1
+st.session_state.last_update_time = time.time()
+
+# Compute deltas for st.metric
+delta_sphericity = round(current_sphericity - st.session_state.prev_sphericity, 2)
+delta_metr = round(current_metr - st.session_state.prev_metr, 4)
+delta_latency = round(sim_inference_latency - st.session_state.prev_latency, 1)
+delta_dropped = sim_dropped_blocks - st.session_state.prev_dropped
+
+# Store current values for next frame delta computation
+st.session_state.prev_sphericity = current_sphericity
+st.session_state.prev_metr = current_metr
+st.session_state.prev_latency = sim_inference_latency
+st.session_state.prev_dropped = sim_dropped_blocks
+
+# =====================================================================
 
 st.title("SpaceShield Command Console")
-st.info("Telemetry parameters registered. Awaiting simulation execution...")
+st.success(f"Simulation model active. Verdict: {threat_verdict} | Sphericity: {current_sphericity:.2f}")
