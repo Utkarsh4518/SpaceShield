@@ -499,6 +499,32 @@ st.markdown(f"""
 st.title("SpaceShield Command Console")
 st.markdown("Ground-station satellite defense command interface. Real-time spatiotemporal anomaly detection, multi-antenna spatial nulling, and tracking loop visualization.")
 
+# --- CHANGE START: QUICK START ORIENTATION CARD ---
+# Initialize session state variable to track visibility of the onboarding card
+if 'show_quick_start' not in st.session_state:
+    st.session_state.show_quick_start = True
+
+# Render onboarding card only if visibility state is true
+if st.session_state.show_quick_start:
+    with st.container():
+        st.markdown("""
+        <div style="background: rgba(16, 26, 48, 0.7); border: 1px solid rgba(0, 229, 255, 0.15); border-left: 4px solid #00e5ff; border-radius: 4px; padding: 16px; margin-bottom: 1rem;">
+            <span style="color: #00e5ff; font-family: monospace; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">Quick Start Guide</span>
+            <p style="font-size: 0.8rem; margin: 8px 0; line-height: 1.6; color: #8899aa; font-family: monospace;">
+                <b>What it is:</b> SpaceShield is a software-defined defense pipeline designed to detect and block RF interference using spatial signal processing.<br>
+                <b>Demo Duration:</b> ~60 seconds.<br><br>
+                <b>Three Simple Steps:</b><br>
+                1. <b>Verify Baseline</b>: Observe the green NOMINAL status bar and low metric baselines under normal conditions.<br>
+                2. <b>Inject Threat</b>: Use the Scenario Control Console buttons to trigger a simulated signal attack.<br>
+                3. <b>Monitor Recovery</b>: Watch the Sphericity, METR, and Tracking Error indicators adapt to null out interference.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("Hide Guide", key="hide_onboarding_guide_btn", help="Hide this introduction panel from view"):
+            st.session_state.show_quick_start = False
+            st.rerun()
+# --- CHANGE END: QUICK START ORIENTATION CARD ---
+
 # =====================================================================
 # [B] THREAT STATUS BANNER
 # =====================================================================
