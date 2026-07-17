@@ -582,5 +582,34 @@ d_col5.metric(
 st.markdown("---")
 
 # =====================================================================
+# [E] SIGNAL INTEGRITY CHARTS
+# =====================================================================
+st.markdown('<div id="signal-integrity-charts"></div>', unsafe_allow_html=True)
+st.markdown("### Signal Integrity Charts")
 
-st.info("Signal integrity visual components loading...")
+e_col1, e_col2 = st.columns(2)
+
+with e_col1:
+    st.markdown("**Sphericity Score vs. Gamma Threshold**")
+    st.caption("Bartlett-corrected LLR statistic against the user-adjusted chi-squared decision boundary.")
+    sphericity_chart = {
+        'Sphericity Score': st.session_state.hist_sphericity,
+        f'γ Threshold ({sat_gamma:.1f})': [sat_gamma] * 100
+    }
+    st.line_chart(sphericity_chart, height=300)
+
+with e_col2:
+    st.markdown("**METR Anisotropy Index**")
+    st.caption("Maximum Eigenvalue to Trace Ratio — isotropic baseline at 0.25, breach threshold at 0.50.")
+    metr_chart = {
+        'METR (λ_max/Tr)': st.session_state.hist_fim,
+        'Isotropic (0.25)': [0.25] * 100,
+        'Breach (0.50)': [0.50] * 100
+    }
+    st.line_chart(metr_chart, height=300, y_label="METR")
+
+st.markdown("---")
+
+# =====================================================================
+
+st.info("Tracking loop monitoring systems loading...")
