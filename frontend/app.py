@@ -481,6 +481,39 @@ st.session_state.prev_latency = sim_inference_latency
 st.session_state.prev_dropped = sim_dropped_blocks
 
 # =====================================================================
+# [A] SYSTEM STATUS BAR
+# =====================================================================
+update_ts = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S.") + f"{datetime.datetime.now().microsecond // 1000:03d}"
+st.markdown(f"""
+<div class="status-bar">
+    <span><span class="conn-offline">● {backend_mode}</span></span>
+    <span>Session: <span style="color: #00e5ff;">{elapsed_str}</span></span>
+    <span>Frames: <span style="color: #00e5ff;">{st.session_state.frames_received}</span></span>
+    <span>Last Update: <span style="color: #00e5ff;">{update_ts}</span></span>
+</div>
+""", unsafe_allow_html=True)
 
+# =====================================================================
+# MAIN DASHBOARD HEADER
+# =====================================================================
 st.title("SpaceShield Command Console")
-st.success(f"Simulation model active. Verdict: {threat_verdict} | Sphericity: {current_sphericity:.2f}")
+st.markdown("Ground-station satellite defense command interface. Real-time spatiotemporal anomaly detection, multi-antenna spatial nulling, and tracking loop visualization.")
+
+# =====================================================================
+# [B] THREAT STATUS BANNER
+# =====================================================================
+if threat_verdict == "CRITICAL SPOOFING":
+    banner_class = "threat-banner-spoofing"
+    banner_text = "CRITICAL SPOOFING — MULTI-ANTENNA SPATIAL NULLING ENGAGED — PHASE-LOCK UNDER PROTECTION"
+elif threat_verdict == "JAMMING":
+    banner_class = "threat-banner-jamming"
+    banner_text = "BARRAGE JAMMING DETECTED — ELEVATED NOISE FLOOR — SPATIAL FILTERING ACTIVE"
+else:
+    banner_class = "threat-banner-normal"
+    banner_text = "NOMINAL — ALL SPATIAL AND TEMPORAL LOOPS WITHIN CERTIFIED SAFETY ENVELOPES"
+
+st.markdown(f'<div class="{banner_class}">{banner_text}</div>', unsafe_allow_html=True)
+
+# =====================================================================
+
+st.info("Scenario control interfaces loading...")
