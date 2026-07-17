@@ -611,5 +611,85 @@ with e_col2:
 st.markdown("---")
 
 # =====================================================================
+# [F] TRACKING LOOP MONITOR
+# =====================================================================
+st.markdown('<div id="tracking-loop-monitor"></div>', unsafe_allow_html=True)
+st.markdown("### Tracking Loop Monitor")
+st.caption("Simulated Tracking Loop (Local Model) — Early-Minus-Late discriminator output with adaptive Kalman flywheel filter.")
 
-st.info("Tracking loop monitoring systems loading...")
+f_col1, f_col2, f_col3 = st.columns(3)
+
+loop_status = "LOCKED" if current_error < 0.0120 else "CYCLE SLIP RISK"
+f_col1.metric(
+    "Current Track Error",
+    f"{current_error:.4f} chips",
+    help="Instantaneous code tracking error output from the EML discriminator, filtered through the adaptive Kalman loop."
+)
+f_col2.metric(
+    "Active Dynamic Load",
+    f"{sat_dynamics:.1f} G",
+    help="Current acceleration stress applied to the tracking loop. Maximum validated bound is 4.0G."
+)
+f_col3.metric(
+    "Loop Status",
+    loop_status,
+    help="LOCKED = tracking error below 0.0120 chip hard limit. CYCLE SLIP RISK = error exceeding safety ceiling."
+)
+
+error_chart = {
+    'Tracking Error (chips)': st.session_state.hist_error,
+    'Hard Limit (0.0120)': [0.0120] * 100
+}
+st.line_chart(error_chart, height=280)
+
+st.markdown("---")
+
+# =====================================================================
+# [G] FORENSIC EVENT LOG
+# =====================================================================
+st.markdown('<div id="forensic-event-log"></div>', unsafe_allow_html=True)
+st.markdown("### Forensic Event Log")
+
+# Deduplicated log entry: only append when verdict changes
+if threat_verdict != st.session_state.last_logged_verdict:
+    ts = datetime.datetime.now().strftime("%H:%M:%S.") + f"{datetime.datetime.now().microsecond // 1000:03d}"
+    entry = {
+        "time": ts,
+        "verdict": threat_verdict,
+        "sphericity": f"{current_sphericity:.2f}",
+        "metr": f"{current_metr:.4f}",
+        "latency": f"{sim_inference_latency:.1f}"
+    }
+    st.session_state.event_log.append(entry)
+    # FIFO eviction beyond 200 entries
+    if len(st.session_state.event_log) > 200:
+        st.session_state.event_log.pop(0)
+    st.session_state.last_logged_verdict = threat_verdict
+
+# Render log
+if st.session_state.event_log:
+    log_html_lines = []
+    for entry in st.session_state.event_log:
+        verdict = entry["verdict"]
+        if verdict == "CRITICAL SPOOFING":
+            css_class = "log-entry-spoofing"
+        elif verdict == "JAMMING":
+            css_class = "log-entry-jamming"
+        else:
+            css_class = "log-entry-normal"
+        log_html_lines.append(
+            f'<div class="{css_class}">[{entry["time"]}]  {verdict}  |  Sphericity={entry["sphericity"]}  |  METR={entry["metr"]}  |  Latency={entry["latency"]}µs</div>'
+        )
+    log_html = "\n".join(log_html_lines)
+    st.markdown(f'<div class="forensic-log">{log_html}</div>', unsafe_allow_html=True)
+else:
+    st.markdown(
+        '<div class="forensic-log" style="color: #667788; text-align: center; padding: 40px;">No threat events recorded this session.</div>',
+        unsafe_allow_html=True
+    )
+
+st.markdown("---")
+
+# =====================================================================
+
+st.info("Compliance and verification manifests loading...")
