@@ -342,7 +342,34 @@ def professional_alert(message, level="info"):
     st.markdown(html, unsafe_allow_html=True)
 
 # =====================================================================
+# SESSION STATE INITIALIZATION
+# =====================================================================
+if 'hist_sphericity' not in st.session_state:
+    st.session_state.hist_sphericity = [0.0] * 100
+if 'hist_error' not in st.session_state:
+    st.session_state.hist_error = [0.0] * 100
+if 'hist_fim' not in st.session_state:
+    st.session_state.hist_fim = [0.0] * 100
+if 'session_start_time' not in st.session_state:
+    st.session_state.session_start_time = time.time()
+if 'last_update_time' not in st.session_state:
+    st.session_state.last_update_time = time.time()
+if 'frames_received' not in st.session_state:
+    st.session_state.frames_received = 0
+if 'event_log' not in st.session_state:
+    st.session_state.event_log = []
+if 'last_logged_verdict' not in st.session_state:
+    st.session_state.last_logged_verdict = "NORMAL"
+if 'prev_sphericity' not in st.session_state:
+    st.session_state.prev_sphericity = 0.0
+if 'prev_metr' not in st.session_state:
+    st.session_state.prev_metr = 0.0
+if 'prev_latency' not in st.session_state:
+    st.session_state.prev_latency = 0.0
+if 'prev_dropped' not in st.session_state:
+    st.session_state.prev_dropped = 0
 
-import streamlit as st
+# =====================================================================
+
 st.title("SpaceShield Command Console")
-st.info("Initializing command console system subsystems...")
+st.info("Subsystems loaded. Initializing session telemetry state...")
