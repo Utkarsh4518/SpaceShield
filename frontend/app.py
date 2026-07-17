@@ -515,5 +515,31 @@ else:
 st.markdown(f'<div class="{banner_class}">{banner_text}</div>', unsafe_allow_html=True)
 
 # =====================================================================
+# [C] SCENARIO CONTROL STRIP
+# =====================================================================
+st.markdown("### Scenario Control Console")
+sc_col1, sc_col2, sc_col3, sc_col4 = st.columns(4)
+with sc_col1:
+    if st.button("Nominal Operations", help="Reset all parameters to safe baseline values."):
+        st.query_params["scenario"] = "nominal"
+        st.rerun()
+with sc_col2:
+    if st.button("Inject Barrage Jamming", help="Simulate S-Band barrage jamming attack."):
+        st.query_params["scenario"] = "jamming"
+        st.rerun()
+with sc_col3:
+    if st.button("Trigger Spoofing Attack", help="Simulate coordinated GPS spoofing attack."):
+        st.query_params["scenario"] = "spoofing"
+        st.rerun()
+with sc_col4:
+    if st.button("🔒 Emergency Lockdown", help="Initiate zero-trust pool lockdown. Requires backend connection.", disabled=(backend_mode != "LIVE TELEMETRY")):
+        pass
 
-st.info("Scenario control interfaces loading...")
+# Apply scenario from query params (persists across reruns)
+active_scenario = st.query_params.get("scenario", "nominal")
+
+st.markdown("---")
+
+# =====================================================================
+
+st.info("Live telemetry grid loading...")
