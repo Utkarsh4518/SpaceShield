@@ -126,3 +126,22 @@ Once active, the frontend console detects the connection and transitions into **
 ## 5. Certification & Compliance
 SpaceShield complies with the **CERT-In 2026 Space Security Guidelines** for software-defined receiver integrity. The system baseline has been validated across 2,000 high-dynamic closed-loop stress cycles. The golden image is cryptographically signed and verified:
 *   **Release Hash**: `2b02d64d7c319551e65287ee645e617117486a252ccf5f55ebeeedbfc216a9b5`
+
+---
+
+## 6. Guided Demo Walkthrough Visuals
+
+The following steps illustrate the interactive onboarding, scenario injection, and safety compliance layout implemented in the SpaceShield v2.0 console:
+
+1. **System Orientation & Onboarding**: The dismissible `Quick Start Guide` card presents first-time users with a 30-second summary and action choices.
+   * ![1. Onboarding Card](docs/screenshots/1_nominal_onboarding.png)
+2. **Step 1: System Telemetry Verification**: The status bar at the top displays connection metrics and frames processed.
+   * ![2. Telemetry Verification](docs/screenshots/2_tour_step1.png)
+3. **Step 2: Baseline Performance**: Evaluates nominal metrics (Sphericity LLR $\le$ 30, METR $\approx$ 0.25).
+   * ![3. Baseline Metrics](docs/screenshots/3_tour_step2.png)
+4. **Step 3: Barrage Jamming Mitigation**: Highlighting transitions to the pulsing amber warning status when jamming is injected.
+   * ![4. Jamming Mitigation](docs/screenshots/4_tour_step3_jamming.png)
+5. **Step 4: Coordinated Spoofing & Tracking Loop**: Demonstrates tracking loop locks beneath 0.0120 chips under 4.0G shock dynamic load.
+   * ![5. Spoofing & Tracking Loop](docs/screenshots/5_tour_step4_spoofing.png)
+6. **Step 5: Compliance Verification Expanders**: Expands to reveal the frozen baseline metric grid and the signature block.
+   * ![6. Compliance Expander](docs/screenshots/6_compliance_expanded.png)
