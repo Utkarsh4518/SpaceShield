@@ -370,6 +370,63 @@ if 'prev_dropped' not in st.session_state:
     st.session_state.prev_dropped = 0
 
 # =====================================================================
+# SIDEBAR [S1] — DETECTION PARAMETERS
+# =====================================================================
+st.sidebar.markdown("### DETECTION PARAMETERS")
+sat_gamma = st.sidebar.slider(
+    "Chi-Squared Threshold Override (γ)", 10.0, 150.0, 50.0, 0.1,
+    help="Adjusts the statistical decision boundary for Bartlett Sphericity threat classification. Lower bounds yield tighter defense posture but increase false alarm rate."
+)
+sat_attenuation = st.sidebar.slider(
+    "Antenna Attenuation (dB)", 0.0, 30.0, 0.0, 0.1,
+    help="Software-defined antenna front-end attenuation. Reduces overall signal power into the LNA to prevent saturation clipping under high-power jammer scenarios."
+)
+sat_dynamics = st.sidebar.slider(
+    "Target Dynamics Shock (G)", 0.0, 4.0, 0.0, 0.1,
+    help="Simulates sudden high-dynamic acceleration steps (up to 4G) to stress-test the Kalman tracking flywheel and EML code loop stability."
+)
+
+st.sidebar.markdown("---")
+
+# =====================================================================
+# SIDEBAR [S2] — SYSTEM HEALTH INDICATORS
+# =====================================================================
+st.sidebar.markdown("### SYSTEM HEALTH")
+
+# Backend connection status — local simulation mode for v2 (backend WebSocket integration deferred)
+backend_mode = "LOCAL SIMULATION"
+st.sidebar.markdown(f"""
+<div style="font-family: 'Courier New', monospace; font-size: 0.72rem; margin-bottom: 8px;">
+    <span style="color: #d29922; font-weight: 700;">● {backend_mode}</span>
+</div>
+""", unsafe_allow_html=True)
+
+elapsed = time.time() - st.session_state.session_start_time
+elapsed_str = time.strftime("%H:%M:%S", time.gmtime(elapsed))
+st.sidebar.markdown(f"""
+<div style="font-family: 'Courier New', monospace; font-size: 0.7rem; color: #8899aa;">
+    Session Duration: <span style="color: #00e5ff;">{elapsed_str}</span><br>
+    Frames Processed: <span style="color: #00e5ff;">{st.session_state.frames_received}</span><br>
+    Execution Provider: <span style="color: #00e5ff;">Fallback-NumPy-Sim</span>
+</div>
+""", unsafe_allow_html=True)
+
+st.sidebar.markdown("---")
+
+# =====================================================================
+# SIDEBAR — NAVIGATION ANCHORS
+# =====================================================================
+st.sidebar.markdown("### NAVIGATION")
+st.sidebar.markdown("""
+<div style="font-family: 'Courier New', monospace; font-size: 0.7rem; line-height: 2.2;">
+    <a href="#signal-integrity-charts" style="color: #00e5ff; text-decoration: none;">↓ Signal Integrity</a><br>
+    <a href="#tracking-loop-monitor" style="color: #00e5ff; text-decoration: none;">↓ Tracking Loop</a><br>
+    <a href="#forensic-event-log" style="color: #00e5ff; text-decoration: none;">↓ Forensic Log</a><br>
+    <a href="#compliance-audit" style="color: #00e5ff; text-decoration: none;">↓ Compliance</a>
+</div>
+""", unsafe_allow_html=True)
+
+# =====================================================================
 
 st.title("SpaceShield Command Console")
-st.info("Subsystems loaded. Initializing session telemetry state...")
+st.info("Telemetry parameters registered. Awaiting simulation execution...")
