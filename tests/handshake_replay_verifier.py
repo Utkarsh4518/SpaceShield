@@ -17,7 +17,7 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 
 # Dynamically link the backend modules
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.append(os.path.join(BASE_DIR, 'backend', 'src'))
+sys.path.append(os.path.join(BASE_DIR, 'backend', 'src', 'satcom_core'))
 sys.path.append(os.path.join(BASE_DIR, 'tests'))
 
 from secure_handshake_interceptor import SecureHandshakeInterceptor

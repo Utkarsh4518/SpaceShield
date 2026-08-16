@@ -2,8 +2,6 @@ import time
 import threading
 import logging
 import numpy as np
-import SoapySDR
-from SoapySDR import * # type: ignore
 import queue
 import scipy.signal
 from rf_frontend_emulator import RfFrontendEmulator
@@ -11,6 +9,20 @@ from rf_frontend_emulator import RfFrontendEmulator
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] [SoapyBridge] %(message)s')
 logger = logging.getLogger(__name__)
+
+# SoapySDR is a physical-hardware dependency (talks to real SDR drivers) and is
+# intentionally NOT in requirements.txt: the harness, tests, and simulation
+# mode must all work on machines with no SDR attached and no SoapySDR install.
+# Import failure here only becomes fatal if hardware mode is explicitly
+# requested (see SoapyReceiverBridge.initialize_hardware below).
+try:
+    import SoapySDR
+    from SoapySDR import SOAPY_SDR_RX, SOAPY_SDR_CF32
+    SOAPY_SDR_AVAILABLE = True
+except ImportError:
+    SoapySDR = None
+    SOAPY_SDR_RX = SOAPY_SDR_CF32 = None
+    SOAPY_SDR_AVAILABLE = False
 
 class SoapyReceiverBridge:
     """
@@ -56,6 +68,16 @@ class SoapyReceiverBridge:
         
     def initialize_hardware(self):
         """Bind to the SDR hardware and configure stream parameters."""
+        if not SOAPY_SDR_AVAILABLE:
+            raise RuntimeError(
+                "Hardware mode was requested (SoapyReceiverBridge.initialize_hardware) "
+                "but the 'SoapySDR' Python bindings are not installed on this system. "
+                "SoapySDR is a physical-hardware dependency and is intentionally not "
+                "part of requirements.txt so the rest of SpaceShield can run in "
+                "simulation mode without it. Install SoapySDR + the driver module for "
+                "your device (e.g. soapysdr-module-rtlsdr) to enable live SDR ingestion, "
+                "or use RfFrontendEmulator / the simulation pipeline instead."
+            )
         logger.info(f"Initializing SDR device with args: {self.device_args}")
         try:
             self.sdr = SoapySDR.Device(self.device_args)

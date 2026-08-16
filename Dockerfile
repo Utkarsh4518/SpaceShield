@@ -75,9 +75,20 @@ USER spaceshield_rt
 # ------------------------------------------------------------------------------
 # RUNTIME CAPABILITIES NOTE
 # When executing this container in production, the orchestrator MUST enforce:
-# docker run --cap-drop=ALL --cap-add=IPC_LOCK --cap-add=SYS_NICE 
+# docker run --cap-drop=ALL --cap-add=IPC_LOCK --cap-add=SYS_NICE
 # (IPC_LOCK and SYS_NICE are required for rt_thread_allocator.py mlockall and sched_setscheduler)
 # ------------------------------------------------------------------------------
 
-# Launch the FastAPI WebSocket Loop bound to the exposed interface
-ENTRYPOINT ["python", "-m", "uvicorn", "backend.src.api_bridge:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--log-level", "warning"]
+# There is no installed "backend" package (no __init__.py files exist under
+# backend/src) -- every module is a plain script that resolves sibling
+# imports via its own sys.path.append(dirname(__file__)). Running it as a
+# uvicorn "package.module:app" import target does not work against this
+# layout. Run dashboard_api.py directly instead, exactly as the local dev
+# instructions in README.md do; its own __main__ block starts uvicorn on
+# 0.0.0.0:8000.
+# Numba's JIT disk cache (cache=True) needs a writable directory, but this
+# image's application tree is mounted read-only (chmod 555 above) -- point
+# it at the writable /tmp tmpfs mount declared in docker-compose.yml.
+ENV NUMBA_CACHE_DIR=/tmp/numba_cache
+
+ENTRYPOINT ["python", "backend/src/satcom_core/dashboard_api.py"]

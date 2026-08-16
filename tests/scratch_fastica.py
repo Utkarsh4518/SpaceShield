@@ -4,7 +4,7 @@ import time
 import numpy as np
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-BACKEND_SRC = os.path.join(BASE_DIR, 'backend', 'src')
+BACKEND_SRC = os.path.join(BASE_DIR, 'backend', 'src', 'satcom_core')
 sys.path.insert(0, BACKEND_SRC)
 
 from fastica_separator import FastICASeparator

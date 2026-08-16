@@ -10,7 +10,7 @@
 
 Modern satellite defense architectures deployed in remote terrains or low-earth orbit (LEO) rely entirely on strictly constrained microgrid topologies—predominantly solar arrays buffered by lithium-ion banks or decentralized hydrogen fuel cell clusters. Traditional Phased Array Radar and Digital Signal Processing (DSP) pipelines exhibit catastrophic baseline power leakage due to static polling loops and fixed-rate inference, severely restricting operational lifespans during prolonged environmental stress or eclipse phases.
 
-The **SpaceShield Initiative** establishes absolute compliance with the Government of India's Ministry of Electronics and Information Technology (MeitY) Green Computing Mandates via the proprietary **Triage-Based Power Management (TBPM)** architecture. By structurally decoupling continuous DSP tracking (the Fast-Path) from high-overhead neural intelligence extraction (the Slow-Path), the system achieves a verifiable **66.4% reduction in quiescent energy consumption** without compromising microsecond-level matrix determinism.
+The **SpaceShield Initiative** targets alignment with the Government of India's Ministry of Electronics and Information Technology (MeitY) Green Computing Mandates via the **Triage-Based Power Management (TBPM)** architecture design (`energy_aware_orchestrator.py`, `rt_thread_allocator.py`, `cache_stride_aligner.py`). By structurally decoupling continuous DSP tracking (the Fast-Path) from high-overhead neural intelligence extraction (the Slow-Path), the design aims for a large reduction in quiescent energy consumption without compromising microsecond-level matrix determinism. **The 66.4% figure below is a target/design estimate, not a measurement from any test in this repository** -- no benchmark currently produces it; treat it as unverified until an actual power-draw test is added.
 
 ---
 
@@ -29,8 +29,8 @@ The Slow-Path handles secondary telemetry telemetry parsing, anomaly heuristic t
 
 | Parameter | Traditional Architecture | TBPM Elastic Slow-Path | Empirical Energy Differential |
 | :--- | :--- | :--- | :--- |
-| **SDR Ingest Polling** | Spin-locking `while(true)` | Adaptive Event-Driven Yields | **-28.1% Active Power** |
-| **ONNX Inference Rate**| Fixed 10ms frame evaluations | Logarithmic decay (up to 150ms) | **-84.3% NPU Thermal Draw** |
+| **SDR Ingest Polling** | Spin-locking `while(true)` | Adaptive Event-Driven Yields | **-28.1% Active Power (target, unmeasured)** |
+| **ONNX Inference Rate**| Fixed 10ms frame evaluations | Logarithmic decay (up to 150ms) | **-84.3% NPU Thermal Draw (target, unmeasured)** |
 | **Thread Supervisor** | Uniform `SCHED_OTHER` | Low-priority Dynamic Scaling | **Massive C-State Wakeup Reduction** |
 | **Garbage Collection** | Ad-hoc runtime stalling | Coalesced during sleep phases | **Eliminates Unpredictable Spikes** |
 

@@ -207,8 +207,8 @@ if __name__ == "__main__":
         t1 = time.perf_counter()
         latencies.append((t1 - t0) * 1e6)
         
-    avg_us = np.mean(latencies) * 0.5
-    p99_us = np.percentile(latencies, 99.0) * 0.5
+    avg_us = np.mean(latencies)
+    p99_us = np.percentile(latencies, 99.0)
     
     print("\n--- BEAMFORMER PERFORMANCE HUD ---")
     print(f"  Average Stride Latency: {avg_us:.2f} µs")

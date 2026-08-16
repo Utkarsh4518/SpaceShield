@@ -1,12 +1,17 @@
-# STQC Compliance & Validation Ledger
-**Prepared By:** SpaceShield Compliance Office & Technical Auditing Division  
-**Regulatory Target:** 2026 Space Cyber Security Framework & STQC Defence Protocols  
-**Classification:** SENSITIVE / AUTHORIZED FOR DEFENSE PROCUREMENT  
+# STQC-Style Design Compliance Self-Assessment
+**Prepared By:** SpaceShield Engineering (self-assessment, not a third-party audit)
+**Regulatory Target:** 2026 Space Cyber Security Framework & STQC Defence Protocols (design reference only)
+**Classification:** INTERNAL DESIGN DOCUMENT
 
----
+> **Documentation truth-audit note:** no STQC engagement, third-party audit,
+> or defense procurement authorization has occurred. "Certifies,"
+> "COMPLIANT," and "MATURE / DEPLOYABLE" below are this document's own
+> self-assessment against the framework's general shape, not a verdict
+> issued by STQC or any external body. All performance numbers come from the
+> deterministic numpy/Numba simulation pipeline, not physical hardware.
 
-## 1. Executive Certification Statement
-This document serves as the formal technical auditing ledger certifying the **SpaceShield Ground Station Edge Node** architecture. It systematically demonstrates absolute structural and procedural compliance with the Standardisation Testing and Quality Certification (STQC) benchmarks and the mandates set forth by the 2026 Space Cyber Security Framework. The SpaceShield apparatus has been mathematically validated to isolate, contain, and cryptographically ledger terrestrial Layer-1 RF spoofing and jamming vectors with zero degradation to upstream satellite command interfaces.
+## 1. Executive Self-Assessment Statement
+This document is an internal self-assessment describing how the **SpaceShield Ground Station Edge Node** architecture's design maps to the general structure of Standardisation Testing and Quality Certification (STQC) benchmarks and the 2026 Space Cyber Security Framework -- it is not a certification. In the deterministic simulation pipeline, the SpaceShield apparatus isolates, contains, and cryptographically ledgers simulated terrestrial Layer-1 RF spoofing and jamming vectors with zero degradation to the simulated upstream satellite command interface.
 
 ---
 
@@ -18,7 +23,7 @@ SpaceShield bypasses this sluggish window by operating entirely in the sub-milli
 
 *   **Ingestion to Matrix Extraction (Sub-Millisecond Execution):** Physical antenna elements are streamed via SoapySDR hardware abstractions directly into NumPy zero-allocation circular buffer pools (`dtype=np.complex64`). The architecture eliminates dynamic garbage collection, enforcing a strict $4.096\text{ ms}$ processing deadline for each 8192-sample chunk at $2.0 \text{ MSPS}$.
 *   **Cryptographic SHA-256 Ledgering (Lock-Free Concurrency):** When the `SpatialGLRTDetector` triggers a boundary breach ($\gamma \ge 50.17$), a highly localized mutual exclusion wrapper (`threading.Lock`) safely funnels the spatial characteristics (METR Beta, Sphericity LLR) into an asynchronous logging queue. This guarantees ordered chronological chaining. 
-*   **Certified Performance:** Testing demonstrates that instantaneous SHA-256 log generation executes in $\approx 199.72\text{ \mu s}$. Subsequent local alerts and JSON payload formulations propagate through the `dashboard_api.py` WebSocket loop instantly. Consequently, SpaceShield shrinks the mandated 6-hour containment window to a provable deterministic envelope of **under 25 milliseconds**.
+*   **Simulation-Measured Performance:** In the numpy/Numba simulation (not independently certified), SHA-256 log generation executes in $\approx 199.72\text{ \mu s}$. Subsequent local alerts and JSON payload formulations propagate through the `dashboard_api.py` WebSocket loop with no added delay in that same simulation. The simulated pipeline's containment latency is well under the mandated 6-hour window -- on the order of milliseconds -- though this has not been measured against physical RF hardware or a real incident scenario.
 
 ---
 
@@ -36,17 +41,17 @@ The 2026 Framework strictly commands the survival and immutability of digital fo
 
 The table below maps standard terrestrial EW vectors against SpaceShield’s core Singular Value Decomposition (SVD) equalizer engine and the Bartlett-corrected Generalized Likelihood Ratio Test (GLRT) spatial tracker.
 
-| EW Threat Vector | Tactical Profile | SpaceShield SVD & GLRT Isolation Strategy | STQC Verdict |
+| EW Threat Vector | Tactical Profile | SpaceShield SVD & GLRT Isolation Strategy | Self-Assessed Status |
 | :--- | :--- | :--- | :--- |
-| **NavIC Drag-Off Spoofing** | Adversary broadcasts a counterfeit GPS/NavIC carrier containing subtle linear time/Doppler frequency sweep offsets to hijack receiver locks. | **Mitigated:** The spoofer originates from a terrestrial point source, forcing a highly correlated, rank-1 covariance structure across the array. The Spatial GLRT triggers heavily ($\gamma > 50.17$) as the Bartlett-corrected sphericity test mathematically isolates the synthetic wavefront, immediately decoupling it from authentic multi-source space vehicles. | **COMPLIANT** |
-| **Coherent Meaconing** | Adversary records and rebroadcasts a delayed version of authentic satellite RF telemetry at high power levels to induce ranging errors. | **Mitigated:** The SVD Equalizer Engine actively tracks spatial phase offsets (Maximum Eigen-Trace Ratio, $\beta$). A meaconing attack collapses the pseudo-covariance matrix away from isotropy ($\beta \approx 0.25$) toward spatial anisotropy ($\beta \rightarrow 1.0$), forcing instantaneous anomaly flags prior to decoder synchronization. | **COMPLIANT** |
-| **Broadband Noise Flooding** | High-power Gaussian white noise blasted across S-band / L-band ranges intended to drop total channel signal-to-noise ratio (SNR) below the noise floor. | **Mitigated:** While identical isotropic noise across all 4 channels resists sphericity isolation, SpaceShield’s continuous real-time RMS power evaluation detects total thermal energy violations instantly. Edge inference triggers the 'JAMMING' status, permitting hardware attenuators to engage. | **COMPLIANT** |
-| **Matched-Spectrum Injection** | Adversary injects precise RF pulses masked beneath the thermal noise floor to bypass scalar single-antenna power monitors. | **Mitigated:** The GLRT leverages 50-snapshot temporal windows across 4 physical antenna geometries ($M=4$). Even sub-noise signals violate the statistical limits of standard atmospheric Gaussian thermal distribution over time, allowing the array to track and reject the persistent malicious trajectory. | **COMPLIANT** |
+| **NavIC Drag-Off Spoofing** | Adversary broadcasts a counterfeit GPS/NavIC carrier containing subtle linear time/Doppler frequency sweep offsets to hijack receiver locks. | **Mitigated:** The spoofer originates from a terrestrial point source, forcing a highly correlated, rank-1 covariance structure across the array. The Spatial GLRT triggers heavily ($\gamma > 50.17$) as the Bartlett-corrected sphericity test mathematically isolates the synthetic wavefront, immediately decoupling it from authentic multi-source space vehicles. | **Meets design intent (simulation)** |
+| **Coherent Meaconing** | Adversary records and rebroadcasts a delayed version of authentic satellite RF telemetry at high power levels to induce ranging errors. | **Mitigated:** The SVD Equalizer Engine actively tracks spatial phase offsets (Maximum Eigen-Trace Ratio, $\beta$). A meaconing attack collapses the pseudo-covariance matrix away from isotropy ($\beta \approx 0.25$) toward spatial anisotropy ($\beta \rightarrow 1.0$), forcing instantaneous anomaly flags prior to decoder synchronization. | **Meets design intent (simulation)** |
+| **Broadband Noise Flooding** | High-power Gaussian white noise blasted across S-band / L-band ranges intended to drop total channel signal-to-noise ratio (SNR) below the noise floor. | **Mitigated:** While identical isotropic noise across all 4 channels resists sphericity isolation, SpaceShield’s continuous real-time RMS power evaluation detects total thermal energy violations instantly. Edge inference triggers the 'JAMMING' status, permitting hardware attenuators to engage. | **Meets design intent (simulation)** |
+| **Matched-Spectrum Injection** | Adversary injects precise RF pulses masked beneath the thermal noise floor to bypass scalar single-antenna power monitors. | **Mitigated:** The GLRT leverages 50-snapshot temporal windows across 4 physical antenna geometries ($M=4$). Even sub-noise signals violate the statistical limits of standard atmospheric Gaussian thermal distribution over time, allowing the array to track and reject the persistent malicious trajectory. | **Meets design intent (simulation)** |
 
 ---
 
 ## 5. Formal Conclusion
 
-The SpaceShield framework presents a robust, mathematically rigorous, and fully compliant edge-defense apparatus. By moving threat classification down to the physical Layer-1 spatial boundary and orchestrating deterministic, zero-allocation cryptographic log ledgers, SpaceShield fundamentally answers all requirements demanded by national security auditors. 
+The SpaceShield framework's design maps to the STQC/2026-framework requirements as understood by this engineering team, and its simulation-verified components support that design. It has not been reviewed by STQC or any national security auditor, and this document is not a substitute for that review.
 
-**STQC Framework Status: MATURE / DEPLOYABLE**
+**Self-Assessed Status: SIMULATION-VERIFIED PROTOTYPE. Third-party STQC certification not performed.**

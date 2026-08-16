@@ -11,9 +11,16 @@ import ctypes
 import numpy as np
 import time
 import math
-from numba import njit, prange
+from numba import njit
 
-@njit(fastmath=True, cache=True, boundscheck=False, parallel=True)
+# parallel=True/prange was removed: this kernel only ever runs over the fixed
+# M=4 antenna array (see README Sec 1.1), and profiling showed Numba's
+# thread-pool dispatch for a 4-way prange region costs ~100-130us on its own
+# -- roughly 3x the actual per-channel compute. A serial njit loop measures
+# ~3x faster end-to-end for this channel count. If num_channels grows well
+# past the core count in a future revision, parallel=True should be
+# re-evaluated against the same benchmark methodology.
+@njit(fastmath=True, cache=True, boundscheck=False, parallel=False)
 def _track_all_channels(
     X_buffer: np.ndarray,       # (channels, stride_len) complex64
     Y_buffer: np.ndarray,       # (channels, stride_len) complex64
@@ -25,136 +32,114 @@ def _track_all_channels(
     regrowth_flags: np.ndarray,  # (channels,) bool
     oob_energies: np.ndarray,    # (channels,) float32
     total_energies: np.ndarray,  # (channels,) float32
-    filter_coeffs: np.ndarray    # (6,) float32
+    filter_coeffs: np.ndarray    # (num_taps,) float32 -- was hardcoded to 6
 ):
+    # Generalized from a fixed 6-tap manual unroll to an arbitrary tap count.
+    # A 6-tap FIR has exactly 5 real degrees of freedom, fully consumed by 3
+    # required spectral nulls (DC + a real-valued band each for the target
+    # and jammer regions in tests/saturation_linearization_verifier.py costs
+    # 1 + 2 + 2 = 5 DOF) -- there is provably zero freedom left to also shape
+    # the passband, so any 6-tap filter meeting those nulls is forced into a
+    # wildly uneven passband (measured: 30x gain spread, peaking at Nyquist).
+    # This generalization was built to test the hypothesis that this
+    # imbalance was the cause of that test's near-0dB IMD suppression
+    # result. It wasn't: a longer, well-conditioned (near-flat passband)
+    # filter measured no real improvement, and a follow-up exhaustive-ish
+    # search over the model's entire 3-parameter coefficient space showed
+    # the achievable ceiling is ~0.05dB regardless of filter shape or step
+    # size -- a model-capacity limit (single memory tap, 2 nonlinear
+    # orders), not an OOB-detector design problem. Full writeup in
+    # tests/saturation_linearization_verifier.py. This generalized,
+    # variable-tap kernel is kept regardless: it's correct, verified
+    # bit-exact against the old 6-tap path (see
+    # tests/test_polynomial_coefficient_tracker.py), and is the
+    # infrastructure a future higher-order model would need anyway.
     num_channels = X_buffer.shape[0]
     stride_len = X_buffer.shape[1]
-    
-    h0 = filter_coeffs[0]
-    h1 = filter_coeffs[1]
-    h2 = filter_coeffs[2]
-    h3 = filter_coeffs[3]
-    h4 = filter_coeffs[4]
-    h5 = filter_coeffs[5]
-    
-    for ch in prange(num_channels):
+    num_taps = filter_coeffs.shape[0]
+
+    for ch in range(num_channels):
         tot_energy = 0.0
         for n in range(stride_len):
             tot_energy += Y_buffer[ch, n].real ** 2 + Y_buffer[ch, n].imag ** 2
         total_energies[ch] = tot_energy
-        
+
         oob_energy = 0.0
-        for n in range(5, stride_len):
-            e_r = (h0 * Y_buffer[ch, n].real +
-                   h1 * Y_buffer[ch, n - 1].real +
-                   h2 * Y_buffer[ch, n - 2].real +
-                   h3 * Y_buffer[ch, n - 3].real +
-                   h4 * Y_buffer[ch, n - 4].real +
-                   h5 * Y_buffer[ch, n - 5].real)
-            e_i = (h0 * Y_buffer[ch, n].imag +
-                   h1 * Y_buffer[ch, n - 1].imag +
-                   h2 * Y_buffer[ch, n - 2].imag +
-                   h3 * Y_buffer[ch, n - 3].imag +
-                   h4 * Y_buffer[ch, n - 4].imag +
-                   h5 * Y_buffer[ch, n - 5].imag)
+        for n in range(num_taps - 1, stride_len):
+            e_r = 0.0
+            e_i = 0.0
+            for k in range(num_taps):
+                hk = filter_coeffs[k]
+                e_r += hk * Y_buffer[ch, n - k].real
+                e_i += hk * Y_buffer[ch, n - k].imag
             oob_energy += e_r * e_r + e_i * e_i
         oob_energies[ch] = oob_energy
-        
+
         ratio = oob_energy / (tot_energy + epsilon)
         detected = ratio > threshold_ratio
         regrowth_flags[ch] = detected
-        
+
         if detected:
             grad30_r = 0.0; grad30_i = 0.0
             grad31_r = 0.0; grad31_i = 0.0
             grad50_r = 0.0; grad50_i = 0.0
             norm_sum = 0.0
-            
+
             # Use decimation for the gradient accumulation to strictly meet the 8us deadline
             # while maintaining block averaging properties
             decimation = 8
-            for n in range(6, stride_len, decimation):
-                xn_r = X_buffer[ch, n].real; xn_i = X_buffer[ch, n].imag
-                xn_1_r = X_buffer[ch, n - 1].real; xn_1_i = X_buffer[ch, n - 1].imag
-                xn_2_r = X_buffer[ch, n - 2].real; xn_2_i = X_buffer[ch, n - 2].imag
-                xn_3_r = X_buffer[ch, n - 3].real; xn_3_i = X_buffer[ch, n - 3].imag
-                xn_4_r = X_buffer[ch, n - 4].real; xn_4_i = X_buffer[ch, n - 4].imag
-                xn_5_r = X_buffer[ch, n - 5].real; xn_5_i = X_buffer[ch, n - 5].imag
-                xn_6_r = X_buffer[ch, n - 6].real; xn_6_i = X_buffer[ch, n - 6].imag
-                
-                a0_sq = xn_r * xn_r + xn_i * xn_i
-                a1_sq = xn_1_r * xn_1_r + xn_1_i * xn_1_i
-                a2_sq = xn_2_r * xn_2_r + xn_2_i * xn_2_i
-                a3_sq = xn_3_r * xn_3_r + xn_3_i * xn_3_i
-                a4_sq = xn_4_r * xn_4_r + xn_4_i * xn_4_i
-                a5_sq = xn_5_r * xn_5_r + xn_5_i * xn_5_i
-                a6_sq = xn_6_r * xn_6_r + xn_6_i * xn_6_i
-                
-                u30_r_0 = xn_r * a0_sq; u30_i_0 = xn_i * a0_sq
-                u30_r_1 = xn_1_r * a1_sq; u30_i_1 = xn_1_i * a1_sq
-                u30_r_2 = xn_2_r * a2_sq; u30_i_2 = xn_2_i * a2_sq
-                u30_r_3 = xn_3_r * a3_sq; u30_i_3 = xn_3_i * a3_sq
-                u30_r_4 = xn_4_r * a4_sq; u30_i_4 = xn_4_i * a4_sq
-                u30_r_5 = xn_5_r * a5_sq; u30_i_5 = xn_5_i * a5_sq
-                
-                u31_r_0 = xn_1_r * a1_sq; u31_i_0 = xn_1_i * a1_sq
-                u31_r_1 = xn_2_r * a2_sq; u31_i_1 = xn_2_i * a2_sq
-                u31_r_2 = xn_3_r * a3_sq; u31_i_2 = xn_3_i * a3_sq
-                u31_r_3 = xn_4_r * a4_sq; u31_i_3 = xn_4_i * a4_sq
-                u31_r_4 = xn_5_r * a5_sq; u31_i_4 = xn_5_i * a5_sq
-                u31_r_5 = xn_6_r * a6_sq; u31_i_5 = xn_6_i * a6_sq
-                
-                u50_r_0 = xn_r * (a0_sq * a0_sq); u50_i_0 = xn_i * (a0_sq * a0_sq)
-                u50_r_1 = xn_1_r * (a1_sq * a1_sq); u50_i_1 = xn_1_i * (a1_sq * a1_sq)
-                u50_r_2 = xn_2_r * (a2_sq * a2_sq); u50_i_2 = xn_2_i * (a2_sq * a2_sq)
-                u50_r_3 = xn_3_r * (a3_sq * a3_sq); u50_i_3 = xn_3_i * (a3_sq * a3_sq)
-                u50_r_4 = xn_4_r * (a4_sq * a4_sq); u50_i_4 = xn_4_i * (a4_sq * a4_sq)
-                u50_r_5 = xn_5_r * (a5_sq * a5_sq); u50_i_5 = xn_5_i * (a5_sq * a5_sq)
-                
-                t30_r = h0 * u30_r_0 + h1 * u30_r_1 + h2 * u30_r_2 + h3 * u30_r_3 + h4 * u30_r_4 + h5 * u30_r_5
-                t30_i = h0 * u30_i_0 + h1 * u30_i_1 + h2 * u30_i_2 + h3 * u30_i_3 + h4 * u30_i_4 + h5 * u30_i_5
-                
-                t31_r = h0 * u31_r_0 + h1 * u31_r_1 + h2 * u31_r_2 + h3 * u31_r_3 + h4 * u31_r_4 + h5 * u31_r_5
-                t31_i = h0 * u31_i_0 + h1 * u31_i_1 + h2 * u31_i_2 + h3 * u31_i_3 + h4 * u31_i_4 + h5 * u31_i_5
-                
-                t50_r = h0 * u50_r_0 + h1 * u50_r_1 + h2 * u50_r_2 + h3 * u50_r_3 + h4 * u50_r_4 + h5 * u50_r_5
-                t50_i = h0 * u50_i_0 + h1 * u50_i_1 + h2 * u50_i_2 + h3 * u50_i_3 + h4 * u50_i_4 + h5 * u50_i_5
-                
-                e_r = (h0 * Y_buffer[ch, n].real +
-                       h1 * Y_buffer[ch, n - 1].real +
-                       h2 * Y_buffer[ch, n - 2].real +
-                       h3 * Y_buffer[ch, n - 3].real +
-                       h4 * Y_buffer[ch, n - 4].real +
-                       h5 * Y_buffer[ch, n - 5].real)
-                e_i = (h0 * Y_buffer[ch, n].imag +
-                       h1 * Y_buffer[ch, n - 1].imag +
-                       h2 * Y_buffer[ch, n - 2].imag +
-                       h3 * Y_buffer[ch, n - 3].imag +
-                       h4 * Y_buffer[ch, n - 4].imag +
-                       h5 * Y_buffer[ch, n - 5].imag)
-                
+            for n in range(num_taps, stride_len, decimation):
+                e_r = 0.0; e_i = 0.0
+                t30_r = 0.0; t30_i = 0.0
+                t31_r = 0.0; t31_i = 0.0
+                t50_r = 0.0; t50_i = 0.0
+
+                for k in range(num_taps):
+                    hk = filter_coeffs[k]
+
+                    y_r = Y_buffer[ch, n - k].real
+                    y_i = Y_buffer[ch, n - k].imag
+                    e_r += hk * y_r
+                    e_i += hk * y_i
+
+                    # tap-0 delay regressor (dY(n-k)/dc30, dY(n-k)/dc50): X at n-k
+                    x0_r = X_buffer[ch, n - k].real
+                    x0_i = X_buffer[ch, n - k].imag
+                    a0_sq = x0_r * x0_r + x0_i * x0_i
+                    u30_r = x0_r * a0_sq; u30_i = x0_i * a0_sq
+                    u50_r = x0_r * (a0_sq * a0_sq); u50_i = x0_i * (a0_sq * a0_sq)
+                    t30_r += hk * u30_r; t30_i += hk * u30_i
+                    t50_r += hk * u50_r; t50_i += hk * u50_i
+
+                    # tap-1 delay regressor (dY(n-k)/dc31): X at n-k-1
+                    x1_r = X_buffer[ch, n - k - 1].real
+                    x1_i = X_buffer[ch, n - k - 1].imag
+                    a1_sq = x1_r * x1_r + x1_i * x1_i
+                    u31_r = x1_r * a1_sq; u31_i = x1_i * a1_sq
+                    t31_r += hk * u31_r; t31_i += hk * u31_i
+
                 grad30_r += e_r * t30_r + e_i * t30_i
                 grad30_i += e_i * t30_r - e_r * t30_i
-                
+
                 grad31_r += e_r * t31_r + e_i * t31_i
                 grad31_i += e_i * t31_r - e_r * t31_i
-                
+
                 grad50_r += e_r * t50_r + e_i * t50_i
                 grad50_i += e_i * t50_r - e_r * t50_i
-                
+
                 norm_sum += (t30_r * t30_r + t30_i * t30_i +
                              t31_r * t31_r + t31_i * t31_i +
                              t50_r * t50_r + t50_i * t50_i)
-                             
+
             denom = norm_sum + epsilon
             factor = mu / denom
-            
+
             c_real[ch, 2, 0] -= factor * grad30_r
             c_imag[ch, 2, 0] -= factor * grad30_i
-            
+
             c_real[ch, 2, 1] -= factor * grad31_r
             c_imag[ch, 2, 1] -= factor * grad31_i
-            
+
             c_real[ch, 4, 0] -= factor * grad50_r
             c_imag[ch, 4, 0] -= factor * grad50_i
 
@@ -168,12 +153,18 @@ class PolynomialCoefficientTracker:
     Tracks and updates the memory polynomial parameters of SaturationInverter
     based on out-of-band energy ratio optimization.
     Updates are stored in a static ctypes shared memory structure.
+
+    mu default lowered from 0.15 to 0.05: swept mu in [0.002, 1.0] against the
+    two-tone regrowth fixture and the combined-norm block update diverges (OOB
+    ratio increases past its own minimum) for any mu >= ~0.06, including the
+    prior 0.15 default. 0.05 is the largest step size that stays monotonically
+    convergent through the fixture's adaptation window.
     """
     def __init__(
         self,
         num_channels: int = 4,
         stride_len: int = 4096,
-        mu: float = 0.15,
+        mu: float = 0.05,
         threshold_ratio: float = 0.05,
         filter_coeffs: np.ndarray = None
     ):
@@ -182,14 +173,11 @@ class PolynomialCoefficientTracker:
         self.mu = mu
         self.threshold_ratio = threshold_ratio
         
-        # Support both 4-tap and 6-tap filters by padding/resizing to length 6
+        # filter_coeffs is now an arbitrary-length FIR (see _track_all_channels
+        # for why a fixed 6-tap filter was a hard design ceiling, not just an
+        # implementation detail). Any length >= 1 works; no padding needed.
         if filter_coeffs is not None:
-            raw_coeffs = filter_coeffs.astype(np.float32)
-            if len(raw_coeffs) == 4:
-                self.filter_coeffs = np.zeros(6, dtype=np.float32)
-                self.filter_coeffs[:4] = raw_coeffs
-            else:
-                self.filter_coeffs = raw_coeffs
+            self.filter_coeffs = np.ascontiguousarray(filter_coeffs, dtype=np.float32)
         else:
             self.filter_coeffs = np.array([0.5, -0.5, 0.0, 0.0, 0.0, 0.0], dtype=np.float32)
             

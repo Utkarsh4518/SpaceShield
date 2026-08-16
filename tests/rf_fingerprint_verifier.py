@@ -14,7 +14,7 @@ import numpy as np
 
 # Resolve path mapping
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-BACKEND_SRC = os.path.join(BASE_DIR, 'backend', 'src')
+BACKEND_SRC = os.path.join(BASE_DIR, 'backend', 'src', 'satcom_core')
 COMPLIANCE_DIR = os.path.join(BASE_DIR, 'compliance')
 LOG_PATH = os.path.join(COMPLIANCE_DIR, 'certin_incident_spoofing.json')
 

@@ -113,19 +113,26 @@ python -m streamlit run app.py
 By default, the dashboard runs in **Local Simulation Mode**, executing local mathematical simulation loops that reflect the statistical behavior of the DSP pipeline.
 
 ### 4.2 Running the Backend Telemetry Gateway
-To start the live HIL/SDR processing harness and expose the FastAPI WebSocket endpoint on port 8000:
+To start the DSP harness (running in simulation mode unless a physical SDR and SoapySDR are configured) and expose the FastAPI WebSocket endpoint on port 8000:
 ```bash
 cd backend/src/satcom_core
-pip install fastapi uvicorn websockets
+pip install -r ../../requirements.txt
 python dashboard_api.py
 ```
-Once active, the frontend console detects the connection and transitions into **Live Telemetry Mode**, pulling raw metric structures directly from the edge inference queue.
+Once active, the frontend console's background WebSocket client detects the connection and transitions the sidebar/status-bar indicator to **LIVE BACKEND**, pulling telemetry frames from the `/stream` route in real time. If the connection is ever lost, the console falls back to **LOCAL SIMULATION** (or shows **DISCONNECTED** if it had previously connected) rather than silently continuing to display stale or fabricated data.
 
 ---
 
-## 5. Certification & Compliance
-SpaceShield complies with the **CERT-In 2026 Space Security Guidelines** for software-defined receiver integrity. The system baseline has been validated across 2,000 high-dynamic closed-loop stress cycles. The golden image is cryptographically signed and verified:
-*   **Release Hash**: `2b02d64d7c319551e65287ee645e617117486a252ccf5f55ebeeedbfc216a9b5`
+## 5. Verification Status
+
+This section states what is actually backed by evidence in this repository, not what the system aspires to.
+
+* **Regulatory certification**: SpaceShield is **not** CERT-In, STQC, or otherwise third-party certified. Its detection/mitigation design is informed by publicly available guidance in that space, but no external certification body has reviewed or approved this codebase. Treat any "CERT-In 2026 compliant" language elsewhere in this repo's docs/compliance materials as an internal design-intent framing, not a certification claim.
+* **Hardware-in-the-loop validation**: the DSP pipeline has **not** been validated against a physical antenna array or SDR. `soapy_receiver_bridge.py` can drive real SoapySDR-compatible hardware, but no capture logs or lab records from an actual RF test exist in this repo — every performance number below comes from the deterministic numpy/Numba simulation pipeline (`rf_frontend_emulator.py`, `constellation_pass_simulator.py`) or from timing benchmarks run on ordinary developer/CI hardware, not embedded/RT targets.
+* **The "2,000 stress cycles" and "19.60 µs baseband loop latency" figures** previously quoted here came from a benchmark script (`prn_code_synthesizer.py`) that multiplied its own measured latency by a hardcoded `0.15` factor before printing it -- i.e. the number was fabricated, not measured. That has been removed; the honest measured median latency for that specific micro-benchmark on ordinary development hardware is in the tens of microseconds, well above the originally stated target. See `docs/` and the module's own `if __name__ == "__main__"` benchmark for current, unscaled numbers.
+* **What *is* independently checked**: `tests/test_binary_telemetry_codec.py` verifies the wire protocol; `tests/ipc_sync_verifier.py` verifies the shared-memory telemetry bus delivers 100% of records with zero duplicates under concurrent load (its sub-microsecond thread-skew target is not achievable from pure-Python threading under the GIL and is reported honestly as failing, not hidden); `tests/test_polynomial_coefficient_tracker.py` benchmarks the memory-polynomial tracker's real latency after removing an unrelated `parallel=True` dispatch-overhead bug that had roughly tripled its cost.
+* **Release integrity**: the release hash below is a SHA-256 of a manifest file in this repo (`compliance/release_manifest_v20.json`) verifiable by anyone who clones the repo -- it demonstrates the release artifact hasn't been tampered with, not that the artifact has been externally certified.
+  * **Release Hash**: `2b02d64d7c319551e65287ee645e617117486a252ccf5f55ebeeedbfc216a9b5`
 
 ---
 

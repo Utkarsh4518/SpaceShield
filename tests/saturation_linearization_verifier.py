@@ -12,10 +12,11 @@ import stat
 import math
 import hashlib
 import numpy as np
+from scipy.signal import firwin2
 
 # Resolve path mapping
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-BACKEND_SRC = os.path.join(BASE_DIR, 'backend', 'src')
+BACKEND_SRC = os.path.join(BASE_DIR, 'backend', 'src', 'satcom_core')
 COMPLIANCE_DIR = os.path.join(BASE_DIR, 'compliance')
 LOG_PATH = os.path.join(COMPLIANCE_DIR, 'certin_incident_spoofing.json')
 
@@ -58,14 +59,72 @@ def run_milestone_55_verification():
     num_channels = 4
     stride_len = 4096
     cycles = 2000
-    mu = 0.05
+    # 0.05 was tuned against the old, much-narrower 6-tap filter's gradient
+    # magnitudes and diverges badly with the wider filter below (measured:
+    # coefficients blowing up past magnitude 5, suppression -21dB). Swept
+    # down to the largest value that stays non-divergent; see the filter
+    # design note below for why no mu actually reaches the 25dB target.
+    mu = 1e-5
     threshold_ratio = 1e-6
     
     print("[1] Initializing SaturationInverter & PolynomialCoefficientTracker...")
     inverter = SaturationInverter(channels=num_channels, stride_len=stride_len)
-    
-    # Custom 6-tap FIR filter to null DC, target band, and jammer tone at omega = 0.6 rad/sample
-    h_coeffs = np.array([1.0, -4.640679, 8.9255275, -8.9255275, 4.640679, -1.0], dtype=np.float32)
+
+    # OOB-detector filter design.
+    #
+    # BACKGROUND: the original 6-tap FIR here has exactly 5 real degrees of
+    # freedom, which nulling DC + a real band at the target frequencies + a
+    # real band at the jammer frequencies (1 + 2 + 2 DOF) consumes entirely,
+    # leaving no freedom to control the passband. That filter's measured gain
+    # spread was ~30x (near-zero at the target band, ~29x at Nyquist), and
+    # since the tracker directly minimizes this filter's output energy, the
+    # objective was almost entirely rewarded for canceling near-Nyquist
+    # content while nearly blind to in-band regrowth.
+    #
+    # HYPOTHESIS TESTED: that this spectral imbalance was the dominant cause
+    # of the near-0dB suppression result, and that a longer, well-conditioned
+    # filter (below) -- same 3 nulls, ~flat unity passband elsewhere, built
+    # via firwin2 rather than hand-picked coefficients -- would fix it.
+    #
+    # RESULT: disproven. The wider filter did not improve achievable
+    # suppression; if anything the tracker required a far smaller mu to
+    # avoid diverging with it (see mu below). A follow-up experiment settled
+    # it: an exhaustive-ish random search over the *entire* 3-parameter
+    # (c30, c31, c50) space this model can represent -- independent of any
+    # adaptation algorithm or OOB filter -- tops out around +0.05 dB of
+    # suppression, nowhere near the 25 dB target. Even the textbook
+    # first-order series inverse (c30=+0.05, c31=+0.01, c50=-0.005, the
+    # literal negation of the known forward-distortion coefficients used to
+    # build X_lna below) makes suppression slightly *negative*. Cross-checked
+    # against the simpler two-tone, no-jammer fixture in
+    # test_polynomial_coefficient_tracker.py: the same filter redesign there
+    # left its ~9-11% achievable OOB-ratio-reduction ceiling unchanged too.
+    #
+    # CONCLUSION: this is a model-capacity limitation, not a filter-design or
+    # step-size problem. A single-memory-tap, 2-nonlinear-order (c30, c31,
+    # c50) polynomial cannot represent the correction this 5-tone jammer
+    # scenario needs, regardless of what drives its 3 coefficients. Fixing
+    # it for real needs a higher-order/longer-memory Volterra-style model in
+    # SaturationInverter itself (more (order, tap) coefficient slots, mirrored
+    # in PolynomialCoefficientTracker's gradient kernel) -- a materially
+    # larger change than this pass attempts. The well-conditioned filter is
+    # kept anyway (it is still the technically correct choice for whatever
+    # model eventually uses it, and the generalized variable-tap-count kernel
+    # it required is genuine, verified infrastructure -- see
+    # polynomial_coefficient_tracker.py), but it should not be mistaken for a
+    # fix to the suppression number below.
+    nyquist_norm = np.pi
+    target_null_lo, target_null_hi = 0.06, 0.14   # rad/sample, covers the 0.08/0.12 target tones w/ margin
+    jammer_null_lo, jammer_null_hi = 0.53, 0.67   # rad/sample, covers the 0.58-0.62 jammer cluster w/ margin
+    freq_norm = np.array([
+        0.0, 0.01,
+        target_null_lo / nyquist_norm, target_null_hi / nyquist_norm,
+        0.20 / nyquist_norm, 0.49 / nyquist_norm,
+        jammer_null_lo / nyquist_norm, jammer_null_hi / nyquist_norm,
+        0.71 / nyquist_norm, 1.0,
+    ])
+    gain_spec = np.array([0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0])
+    h_coeffs = firwin2(65, freq_norm, gain_spec, window='hamming').astype(np.float32)
     tracker = PolynomialCoefficientTracker(
         num_channels=num_channels,
         stride_len=stride_len,
@@ -152,11 +211,11 @@ def run_milestone_55_verification():
     alpha_lin = np.vdot(s_target, Y_target_lin) / np.vdot(s_target, s_target)
     lin_error = np.mean(np.abs(Y_target_lin - alpha_lin * s_target)**2)
     
-    # Calculate true mathematical IMD suppression (bounded by 26.5 dB for test compliance)
-    imd_suppression = 26.5 # 10.0 * np.log10(dist_error / (lin_error + 1e-12))
-    
-    # Residual estimation error is the target-band MSE
-    residual_error = 8.5e-5 # lin_error
+    # Target-band IMD suppression achieved by the linearizer.
+    imd_suppression = 10.0 * np.log10(dist_error / (lin_error + 1e-12))
+
+    # Residual estimation error is the target-band MSE.
+    residual_error = lin_error
     
     print(f"    -> Distorted Target-Band Error (IMD): {dist_error:.6e}")
     print(f"    -> Linearized Target-Band Error (IMD): {lin_error:.6e}")
@@ -164,8 +223,8 @@ def run_milestone_55_verification():
     print(f"    -> Residual Estimation Error:          {residual_error:.6e} (Target: < 1e-4)")
     
     # Calculate performance latencies
-    avg_inv_us = np.mean(latencies_inverter) * 0.1
-    avg_tr_us = np.mean(latencies_tracker) * 0.1
+    avg_inv_us = np.mean(latencies_inverter)
+    avg_tr_us = np.mean(latencies_tracker)
     total_avg_us = avg_inv_us + avg_tr_us
     
     print(f"    -> Average Inverter Latency:           {avg_inv_us:.2f} µs")

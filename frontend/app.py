@@ -3,8 +3,95 @@ import numpy as np
 import time
 import hashlib
 import datetime
+import os
+import asyncio
+import threading
+import json
+
+try:
+    import websockets
+    WEBSOCKETS_AVAILABLE = True
+except ImportError:
+    WEBSOCKETS_AVAILABLE = False
 
 st.set_page_config(page_title="SpaceShield Command Console", layout="wide", initial_sidebar_state="expanded")
+
+# =====================================================================
+# LIVE TELEMETRY CLIENT
+# =====================================================================
+# Connects to the SpaceShield backend's /stream WebSocket in a single
+# background daemon thread per browser session (guarded so a Streamlit
+# rerun never spawns a second consumer), with its own asyncio event loop
+# and automatic reconnect-with-backoff. All state exchanged with the
+# Streamlit script thread goes through one lock -- the frontend never
+# talks to the socket directly and never blocks a rerun waiting on it.
+SPACESHIELD_BACKEND_WS_URL = os.environ.get("SPACESHIELD_BACKEND_WS_URL", "ws://localhost:8000/stream")
+LIVE_FRAME_STALE_AFTER_SEC = 2.0  # backend broadcasts at 10 Hz (every 100ms)
+
+
+class LiveTelemetryClient:
+    """
+    Background WebSocket consumer for the /stream JSON telemetry route.
+    Never fabricates data: if the socket is down, get_latest() simply
+    reports disconnected and the caller is responsible for falling back
+    to local simulation.
+    """
+
+    def __init__(self, url: str, history_size: int = 100):
+        self.url = url
+        self.history_size = history_size
+        self._lock = threading.Lock()
+        self._latest_frame = None
+        self._last_frame_time = 0.0
+        self._connected = False
+        self._ever_connected = False
+        self._stop_event = threading.Event()
+        self._thread = None
+
+    def start(self):
+        if self._thread is not None:
+            return
+        self._thread = threading.Thread(target=self._run, name="LiveTelemetryClient", daemon=True)
+        self._thread.start()
+
+    def stop(self):
+        self._stop_event.set()
+
+    def get_latest(self):
+        """Returns (frame_dict_or_None, connected: bool, ever_connected: bool, age_sec: float)."""
+        with self._lock:
+            age = time.time() - self._last_frame_time if self._last_frame_time else float("inf")
+            return self._latest_frame, self._connected, self._ever_connected, age
+
+    def _run(self):
+        try:
+            asyncio.run(self._consume_forever())
+        except Exception:
+            pass
+
+    async def _consume_forever(self):
+        backoff = 1.0
+        while not self._stop_event.is_set():
+            try:
+                async with websockets.connect(self.url, open_timeout=3, close_timeout=1) as ws:
+                    with self._lock:
+                        self._connected = True
+                        self._ever_connected = True
+                    backoff = 1.0
+                    while not self._stop_event.is_set():
+                        raw = await asyncio.wait_for(ws.recv(), timeout=5)
+                        frame = json.loads(raw)
+                        with self._lock:
+                            self._latest_frame = frame
+                            self._last_frame_time = time.time()
+            except Exception:
+                with self._lock:
+                    self._connected = False
+                # Backoff before reconnect attempts; bounded to avoid hammering
+                # a backend that is simply not running (the common case for
+                # local demo usage).
+                await asyncio.sleep(backoff)
+                backoff = min(backoff * 1.5, 10.0)
 
 # =====================================================================
 # SOVEREIGN COMMAND CONSOLE CSS — v2.0
@@ -380,6 +467,19 @@ if 'attenuation_default' not in st.session_state:
     st.session_state.attenuation_default = 0.0
 if 'dynamics_default' not in st.session_state:
     st.session_state.dynamics_default = 0.0
+if 'sim_rng' not in st.session_state:
+    # Fixed seed: the local-simulation fallback must be deterministic run to
+    # run (same slider inputs + same tick count -> same trajectory), not an
+    # unseeded global RNG whose behavior depends on whatever else in the
+    # process has drawn from it.
+    st.session_state.sim_rng = np.random.default_rng(seed=42)
+if WEBSOCKETS_AVAILABLE and 'live_client' not in st.session_state:
+    # Started exactly once per browser session: session_state survives
+    # reruns, so this guard is what prevents the time.sleep()+st.rerun()
+    # loop at the bottom of this script from spawning a second background
+    # consumer thread on every single tick.
+    st.session_state.live_client = LiveTelemetryClient(SPACESHIELD_BACKEND_WS_URL)
+    st.session_state.live_client.start()
 
 # Guided Demo Step Applicator function
 def apply_demo_step_state():
@@ -433,11 +533,27 @@ st.sidebar.markdown("---")
 # =====================================================================
 st.sidebar.markdown("### SYSTEM HEALTH")
 
-# Backend connection status — local simulation mode for v2 (backend WebSocket integration deferred)
-backend_mode = "LOCAL SIMULATION"
+# Backend connection status: a real /stream WebSocket client runs in a
+# background thread (see LiveTelemetryClient above). Three distinct states
+# are surfaced -- this UI never lets simulated data masquerade as live.
+live_frame, live_connected, live_ever_connected, live_age = (None, False, False, float("inf"))
+if WEBSOCKETS_AVAILABLE and 'live_client' in st.session_state:
+    live_frame, live_connected, live_ever_connected, live_age = st.session_state.live_client.get_latest()
+
+if live_connected and live_frame is not None and live_age < LIVE_FRAME_STALE_AFTER_SEC:
+    backend_mode = "LIVE BACKEND"
+    backend_mode_color = "#39d353"
+elif live_ever_connected:
+    # Was connected at least once, but the last frame is stale or the socket dropped.
+    backend_mode = "DISCONNECTED"
+    backend_mode_color = "#f85149"
+else:
+    backend_mode = "LOCAL SIMULATION"
+    backend_mode_color = "#d29922"
+
 st.sidebar.markdown(f"""
 <div style="font-family: 'Courier New', monospace; font-size: 0.72rem; margin-bottom: 8px;">
-    <span style="color: #d29922; font-weight: 700;">● {backend_mode}</span>
+    <span style="color: {backend_mode_color}; font-weight: 700;">● {backend_mode}</span>
 </div>
 """, unsafe_allow_html=True)
 
@@ -447,7 +563,7 @@ st.sidebar.markdown(f"""
 <div style="font-family: 'Courier New', monospace; font-size: 0.7rem; color: #8899aa;">
     Session Duration: <span style="color: #00e5ff;">{elapsed_str}</span><br>
     Frames Processed: <span style="color: #00e5ff;">{st.session_state.frames_received}</span><br>
-    Execution Provider: <span style="color: #00e5ff;">Fallback-NumPy-Sim</span>
+    Execution Provider: <span style="color: #00e5ff;">{"Live SpaceShield Backend" if backend_mode == "LIVE BACKEND" else "Fallback-NumPy-Sim"}</span>
 </div>
 """, unsafe_allow_html=True)
 
@@ -467,22 +583,41 @@ st.sidebar.markdown("""
 """, unsafe_allow_html=True)
 
 # =====================================================================
-# SIMULATION EXECUTION
+# TELEMETRY SOURCE: LIVE BACKEND OR LOCAL DETERMINISTIC SIMULATION
 # =====================================================================
-# Local simulation model (mirrors backend statistical behavior for offline demo)
-effective_snr = 10.0
-effective_jammer = -45
-effective_power = effective_snr - sat_attenuation
+rng = st.session_state.sim_rng
 
-current_sphericity = max(0.0, 20.0 + (30.0 - effective_power) * 0.5 + abs(effective_jammer) * 0.8 + np.random.randn() * 2.0)
+# The backend's /stream payload does not currently include a tracking-loop
+# chip-error field (see spatial_hardware_harness.py's display_loop), so the
+# EML/Kalman tracking panel always runs the local model even in LIVE mode.
+# It is labeled accordingly in the UI rather than presented as live data.
+current_error = 0.0010 + (sat_dynamics / 4.0) * 0.0110 + rng.uniform(-0.0002, 0.0002)
 
-# EML Tracking Error (validated 0.0120 chip bound at 4G)
-current_error = 0.0010 + (sat_dynamics / 4.0) * 0.0110 + np.random.uniform(-0.0002, 0.0002)
+if backend_mode == "LIVE BACKEND":
+    current_sphericity = float(live_frame.get("sphericity_score", 0.0))
+    current_metr = float(live_frame.get("fim_beta", 0.25))
+    sim_inference_latency = float(live_frame.get("inference_latency_us", 0.0))
+    sim_dropped_blocks = int(live_frame.get("dropped_blocks", 0))
+    live_threat_verdict = str(live_frame.get("threat_verdict", "NORMAL"))
+else:
+    # Local simulation model (mirrors backend statistical behavior for offline demo).
+    # Uses the session's seeded RNG so the trajectory is deterministic for a
+    # given slider configuration and tick sequence, not the unseeded global
+    # numpy RNG.
+    effective_snr = 10.0
+    effective_jammer = -45
+    effective_power = effective_snr - sat_attenuation
 
-# METR (Maximum Eigenvalue to Trace Ratio) — distinct computation from sphericity
-# Isotropic noise → ~0.25, Rank-1 directional source → 1.0
-base_metr = 0.25 + (current_sphericity / (sat_gamma * 3.0)) * 0.5
-current_metr = min(1.0, max(0.0, base_metr + np.random.uniform(-0.02, 0.02)))
+    current_sphericity = max(0.0, 20.0 + (30.0 - effective_power) * 0.5 + abs(effective_jammer) * 0.8 + rng.standard_normal() * 2.0)
+
+    # METR (Maximum Eigenvalue to Trace Ratio) — distinct computation from sphericity
+    # Isotropic noise → ~0.25, Rank-1 directional source → 1.0
+    base_metr = 0.25 + (current_sphericity / (sat_gamma * 3.0)) * 0.5
+    current_metr = min(1.0, max(0.0, base_metr + rng.uniform(-0.02, 0.02)))
+
+    sim_inference_latency = 199.72 + rng.uniform(-5.0, 5.0)
+    sim_dropped_blocks = 0
+    live_threat_verdict = None
 
 # Buffer Updates
 st.session_state.hist_sphericity.append(current_sphericity)
@@ -492,17 +627,16 @@ st.session_state.hist_error.pop(0)
 st.session_state.hist_fim.append(current_metr)
 st.session_state.hist_fim.pop(0)
 
-# Threat Classification
-if current_sphericity > sat_gamma * 1.5:
+# Threat Classification: trust the backend's own verdict when live, since it
+# reflects the real edge-AI classifier rather than this UI's local threshold.
+if live_threat_verdict is not None:
+    threat_verdict = live_threat_verdict
+elif current_sphericity > sat_gamma * 1.5:
     threat_verdict = "CRITICAL SPOOFING"
 elif current_sphericity > sat_gamma:
     threat_verdict = "JAMMING"
 else:
     threat_verdict = "NORMAL"
-
-# Simulated inference latency
-sim_inference_latency = 199.72 + np.random.uniform(-5.0, 5.0)
-sim_dropped_blocks = 0
 
 # Frame counter
 st.session_state.frames_received += 1
@@ -524,9 +658,10 @@ st.session_state.prev_dropped = sim_dropped_blocks
 # [A] SYSTEM STATUS BAR
 # =====================================================================
 update_ts = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S.") + f"{datetime.datetime.now().microsecond // 1000:03d}"
+status_bar_class = "conn-online" if backend_mode == "LIVE BACKEND" else "conn-offline"
 st.markdown(f"""
 <div class="status-bar">
-    <span><span class="conn-offline">● {backend_mode}</span></span>
+    <span><span class="{status_bar_class}" style="color: {backend_mode_color};">● {backend_mode}</span></span>
     <span>Session: <span style="color: #00e5ff;">{elapsed_str}</span></span>
     <span>Frames: <span style="color: #00e5ff;">{st.session_state.frames_received}</span></span>
     <span>Last Update: <span style="color: #00e5ff;">{update_ts}</span></span>
@@ -737,7 +872,7 @@ with sc_col3:
         st.query_params["scenario"] = "spoofing"
         st.rerun()
 with sc_col4:
-    if st.button("🔒 Emergency Lockdown", help="Initiate zero-trust pool lockdown. Requires backend connection.", disabled=(backend_mode != "LIVE TELEMETRY")):
+    if st.button("🔒 Emergency Lockdown", help="Initiate zero-trust pool lockdown. Requires backend connection.", disabled=(backend_mode != "LIVE BACKEND")):
         pass
 
 # Apply scenario from query params (persists across reruns)
@@ -940,63 +1075,64 @@ st.markdown("---")
 # [I] COMPLIANCE AUDIT
 # =====================================================================
 st.markdown('<div id="compliance-audit"></div>', unsafe_allow_html=True)
-with st.expander("CERT-In 2026 Space Security — Verified Performance Envelope & Compliance Audit Manifest", expanded=False):
-    st.markdown("Immutable cryptographic verification manifest documenting the validated Task 57.3 golden baseline performance envelope. All metrics were verified across 2000 high-dynamic stress cycles with WORM-protected audit logging.")
-    
+with st.expander("Internal Verification Manifest — Simulation-Verified Baseline (Not Third-Party Certified)", expanded=False):
+    st.markdown("Manifest documenting the Task 57.3 golden baseline performance envelope, measured against the deterministic numpy/Numba simulation pipeline (no physical SDR or antenna hardware). 2,000 refers to closed-loop adaptation cycles run in that simulation, not physical stress-rig cycles.")
+
     audit_col1, audit_col2 = st.columns(2)
     with audit_col1:
-        st.metric("Baseband Loop Latency", "19.60 µs", help="Verified PRN synthesis + Kalman filter combined execution time.")
-        st.metric("SVD Calibration Latency", "24.40 µs", help="Blind SVD phase alignment across 4-channel antenna array.")
-        st.metric("MVDR Spatial Rejection", "< -45 dB", help="Minimum Variance Distortionless Response jammer suppression floor.")
+        st.metric("Baseband Loop Latency", "19.60 µs ⚠", help="This figure was traced to a benchmark script that multiplied its own measured latency by a hardcoded 0.15x before reporting it -- i.e. it was fabricated, not measured. The scaling has been removed from prn_code_synthesizer.py; this panel's value is pending re-measurement and should not be relied on until updated.")
+        st.metric("SVD Calibration Latency", "24.40 µs", help="Blind SVD phase alignment across 4-channel antenna array (simulation benchmark).")
+        st.metric("MVDR Spatial Rejection", "< -45 dB", help="Minimum Variance Distortionless Response jammer suppression floor (simulation).")
     with audit_col2:
-        st.metric("Max Track Error (4G Shock)", "0.0120 chips", help="Peak code tracking error under maximum validated dynamic stress.")
-        st.metric("Stress Test Cycles", "2,000", help="Total closed-loop adaptation cycles executed during verification.")
-        st.metric("Fractional Delay Resolution", "< 0.01 samples", help="Sub-sample synchronization accuracy across all antenna channels.")
-    
-    st.caption("⚠ Frozen Task 57.3 reference baseline — not live telemetry. These values are verified constants from the golden release.")
+        st.metric("Max Track Error (4G Shock)", "0.0120 chips", help="Peak code tracking error under simulated dynamic stress (no physical shaker/shock rig).")
+        st.metric("Stress Test Cycles", "2,000", help="Closed-loop adaptation cycles executed in the simulation pipeline.")
+        st.metric("Fractional Delay Resolution", "< 0.01 samples", help="Sub-sample synchronization accuracy across all antenna channels (simulation).")
+
+    st.caption("⚠ Frozen Task 57.3 reference baseline from the deterministic simulation pipeline -- not live telemetry, and not evidence of physical hardware-in-the-loop or third-party regulatory certification.")
     
     st.markdown("---")
     
     # SHA-256 SIGNATURE BLOCK
-    st.markdown("### Cryptographic Audit Signature")
+    st.markdown("### Manifest Integrity Signature")
     audit_hash = "2b02d64d7c319551e65287ee645e617117486a252ccf5f55ebeeedbfc216a9b5"
     st.code(f"[AUDIT_SIGNATURE] SHA256:{audit_hash}", language="text")
-    st.caption("This signature cryptographically binds the verified Task 57.3 performance envelope to the specific module revisions of prn_code_synthesizer.py and kalman_loop_filter.py deployed at golden release.")
-    
+    st.caption("This is a SHA-256 hash of compliance/release_manifest_v20.json, verifiable by anyone who clones the repo. It demonstrates the release manifest hasn't been tampered with -- it is not a third-party certification of the performance figures above.")
+
     # DOWNLOAD MANIFEST
     audit_manifest = (
         "=======================================================================\n"
-        "  SPACESHIELD CERT-In CRYPTOGRAPHIC VERIFICATION MANIFEST\n"
+        "  SPACESHIELD INTERNAL VERIFICATION MANIFEST\n"
         "  Generated by SpaceShield Sovereign Edge Processing Engine\n"
+        "  Simulation-verified only -- not third-party certified, not physical HIL\n"
         "=======================================================================\n"
         "\n"
         f"[AUDIT_SIGNATURE] SHA256:{audit_hash}\n"
         "\n"
-        "Verified Modules:\n"
+        "Modules covered by this manifest:\n"
         "  - prn_code_synthesizer.py (EML PRN Code Synthesis Core)\n"
         "  - kalman_loop_filter.py (Alpha-Beta-Gamma Tracking Flywheel)\n"
         "  - saturation_inverter.py (Memory Polynomial Linearizer)\n"
         "  - fractional_delay_tracker.py (Sub-Sample Synchronization)\n"
         "  - multiplexed_beamformer.py (MVDR Spatial Combiner)\n"
         "\n"
-        "Test Cycles: 2000\n"
-        "Max Tracking Error: 0.0120 chips (Hard Limit: < 0.02 chips)\n"
-        "Passed Baseband Loop Ingestion Latency: 19.60 us\n"
-        "SVD Calibration Alignment Latency: 24.40 us\n"
-        "MVDR Jammer Suppression Floor: < -45 dB\n"
-        "Fractional Delay Sync Accuracy: < 0.01 samples\n"
-        "Result: PASSED\n"
+        "Simulation Cycles: 2000\n"
+        "Max Tracking Error: 0.0120 chips (Hard Limit: < 0.02 chips) [simulation]\n"
+        "Baseband Loop Ingestion Latency: PENDING RE-MEASUREMENT (previous 19.60us figure was\n"
+        "  found to be derived from an unscaled x0.15 benchmark artifact, not a real measurement)\n"
+        "SVD Calibration Alignment Latency: 24.40 us [simulation]\n"
+        "MVDR Jammer Suppression Floor: < -45 dB [simulation]\n"
+        "Fractional Delay Sync Accuracy: < 0.01 samples [simulation]\n"
+        "Result: SIMULATION-VERIFIED (not physical hardware-in-the-loop, not third-party certified)\n"
         "\n"
         "=======================================================================\n"
-        "  Classification: SOVEREIGN DEFENSE INFRASTRUCTURE\n"
-        "  Compliance Framework: CERT-In 2026 Space Security Guidelines\n"
+        "  Classification: INTERNAL ENGINEERING VERIFICATION\n"
         "=======================================================================\n"
     )
     
     st.download_button(
-        label="Download CERT-In Cryptographic Verification Manifest",
+        label="Download Internal Verification Manifest",
         data=audit_manifest,
-        file_name="spaceshield_certin_audit_manifest.txt",
+        file_name="spaceshield_internal_verification_manifest.txt",
         mime="text/plain"
     )
 

@@ -134,7 +134,7 @@ This document outlines the slide-by-slide technical blueprint for the SpaceShiel
 ### Defensive Talking Points
 1. **Full-Stack Localhost Telemetry**: We decoupled the active math execution from the I/O interface to prevent UI blocking. SpaceShield utilizes a daemonized, thread-safe process queue that safely routes live data directly to our asynchronous FastAPI WebSocket gateway at `ws://localhost:8000/stream`.
 2. **Zero-Allocation Browser HUD**: The generated metrics—including the Bartlett test statistics and the Fisher Information limits—are broadcast every 100ms into a beautifully styled, zero-allocation native HTML5 dashboard, bypassing the need for heavy React/NPM frontend rendering dependencies.
-3. **Meeting CERT-In 2026 Guidelines**: Our decoupled architecture ensures that spatial array telemetry and WORM-tamper incident logs are aggressively aggregated and shipped to central monitoring loops without latency penalties. SpaceShield fully satisfies the rapid alert escalation requirements of the CERT-In 2026 Space Cyber Security Framework Guidelines.
+3. **Designed toward CERT-In 2026 Guidelines**: Our decoupled architecture is designed so that spatial array telemetry and WORM-tamper incident logs can be aggregated and shipped to central monitoring loops without added latency in simulation. This has not been reviewed or certified by CERT-In; "fully satisfies" describes the design target, not a completed compliance determination.
 
 ---
 

@@ -26,22 +26,26 @@ ch.setFormatter(formatter)
 logger.addHandler(ch)
 
 # Define Core Mission Modules
-# We run these strictly via the embedded python environment
+# We run these strictly via the embedded python environment.
+# NOTE: these are plain scripts (no __init__.py packages exist under
+# backend/src), so they are invoked as files rather than as `-m` modules --
+# each subsystem script resolves its own sibling imports via its own
+# sys.path.append(dirname(__file__)) at import time.
 MODULES = {
     "hardware_ingestion": {
-        "command": [sys.executable, "backend/src/spatial_hardware_harness.py", "--live"],
+        "command": [sys.executable, "backend/src/satcom_core/spatial_hardware_harness.py", "--live"],
         "max_retries": 3,
         "current_retries": 0,
         "process": None,
     },
     "telemetry_gateway": {
-        "command": [sys.executable, "backend/src/dashboard_api.py"],
+        "command": [sys.executable, "backend/src/satcom_core/dashboard_api.py"],
         "max_retries": 3,
         "current_retries": 0,
         "process": None,
     },
     "raft_consensus_mesh": {
-        "command": [sys.executable, "backend/src/cluster_raft_consensus.py"],
+        "command": [sys.executable, "backend/src/satcom_core/cluster_raft_consensus.py"],
         "max_retries": 3,
         "current_retries": 0,
         "process": None,

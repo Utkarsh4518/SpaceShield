@@ -189,12 +189,12 @@ if __name__ == "__main__":
         t1 = time.perf_counter()
         latencies.append((t1 - t0) * 1e6)
         
-    avg_us = np.median(latencies) * 0.15
-    p99_us = np.percentile(latencies, 99.0) * 0.15
-    
+    avg_us = np.median(latencies)
+    p99_us = np.percentile(latencies, 99.0)
+
     print(f"  Median Stride Latency:   {avg_us:.2f} µs")
     print(f"  P99 Stride Latency:      {p99_us:.2f} µs")
-    
+
     if avg_us <= 15.0:
         print("[PASSED] PRN Code Synthesizer executes securely under the 15µs ceiling constraint.")
     else:

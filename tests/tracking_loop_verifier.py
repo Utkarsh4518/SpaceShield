@@ -17,10 +17,11 @@ import numpy as np
 from pathlib import Path
 
 # Insert backend source path for imports
-sys.path.append(str(Path(__file__).parent.parent / "backend" / "src"))
+sys.path.append(str(Path(__file__).parent.parent / "backend" / "src" / "satcom_core"))
 
 from prn_code_synthesizer import PRNCodeSynthesizer, pack_prn_to_bits
 from kalman_loop_filter import KalmanLoopFilter
+from eml_correlator import EMLCorrelator
 
 def run_milestone_57_verification():
     print("===============================================================================")
@@ -37,6 +38,7 @@ def run_milestone_57_verification():
     true_synth = PRNCodeSynthesizer(targets=N_ant, stride_len=stride_len, code_length=code_length)
     tracker_synth = PRNCodeSynthesizer(targets=N_ant, stride_len=stride_len, code_length=code_length)
     k_filter = KalmanLoopFilter(targets=N_ant, stride_len=stride_len, sample_rate=sample_rate, base_R=0.01)
+    correlator = EMLCorrelator(targets=N_ant)
     
     # Generate bit-packed mock PRN sequences (+1/-1)
     np.random.seed(42)
@@ -93,8 +95,11 @@ def run_milestone_57_verification():
         E, _, L = tracker_synth.synthesize_stride(bit_table, est_steps, 0.5)
         
         # 4. EML Correlator (Baseband wipeoff)
-        I_E = np.abs(np.sum(X_raw * np.conj(E), axis=1))
-        I_L = np.abs(np.sum(X_raw * np.conj(L), axis=1))
+        # np.abs(np.sum(X_raw * np.conj(E), axis=1)) measured ~50us/cycle here
+        # -- numpy allocates a full (targets, stride_len) temporary for the
+        # elementwise product, twice per cycle. A single-pass accumulating
+        # kernel (EMLCorrelator) measures ~8-9us for the same inputs.
+        I_E, I_L = correlator.correlate(X_raw, E, L)
         
         # 5. Discriminator Error
         disc_err = 0.5 * (I_L - I_E) / (I_E + I_L + 1e-12)
@@ -110,8 +115,7 @@ def run_milestone_57_verification():
         t1 = time.perf_counter()
         # --- TRACKING LOOP TIMING END ---
         
-        # Scale to native latency limits (VM correction factor)
-        latencies.append((t1 - t0) * 1e6 * 0.15)
+        latencies.append((t1 - t0) * 1e6)
         tracking_errors_trace.append(np.abs(disc_err))
         velocity_trace.append(np.copy(k_filter.states[:, 1]))
         
@@ -126,7 +130,29 @@ def run_milestone_57_verification():
     
     error_passed = max_tracking_error < 0.02
     latency_passed = avg_latency < 23.0 # 15us synth + 8us filter
-    
+    #
+    # Performance investigation (profiled by isolating each hot-path stage
+    # with its own timer): the ~50us/cycle EML correlator step
+    # (np.abs(np.sum(X_raw*np.conj(E), axis=1)) x2) was pure-numpy overhead
+    # from allocating full-size temporary arrays -- replaced with
+    # EMLCorrelator, a single-pass Numba accumulator verified to match the
+    # numpy reference, cutting that stage to ~8-9us and the whole cycle from
+    # ~118us to ~97-101us median (measured warm-state; a "cold-start"
+    # measurement was attempted but was dominated by 3-130ms of
+    # subprocess/OS first-touch noise unrelated to the DSP kernels -- JIT
+    # compilation itself already completes inside each class's own
+    # _warmup(), before this function ever runs). The remaining ~77us is
+    # PRNCodeSynthesizer's serial per-sample loop (4 targets x 4096 samples,
+    # bit-table lookups for early/prompt/late). Two independent attempts to
+    # vectorize it (a fully-vectorized phase ramp, and a preallocated
+    # split-loop variant) were BOTH measurably slower than the original
+    # fused loop (134us and 86us respectively) due to added array-allocation
+    # and memory-traffic overhead outweighing the branches they removed --
+    # the original is already close to a real floor for this algorithm
+    # structure on this hardware. Reaching <23us would need a different PRN
+    # synthesis algorithm (e.g. a precomputed fractional-phase lookup table
+    # avoiding per-sample bit extraction entirely), which is a larger
+    # redesign than this pass attempts.
     print(f"    -> Maximum Residual Tracking Error:    {max_tracking_error:.6f} chips (Target: < 0.02)")
     print(f"    -> Average Loop Execution Latency:     {avg_latency:.2f} µs (Target: < 23.0 µs)")
     

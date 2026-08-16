@@ -1,8 +1,17 @@
 # 🇮🇳 SpaceShield Initiative: Cryptographic Compliance & Security Audit Manifest
-## STQC Zero-Trust Certification Standard Evaluation Baseline
+## STQC-Style Design Reference (Internal, Not a Certification)
 **Document ID:** SPM-STQC-CRYPTO-2026-v2.1  
-**Classification:** RESTRICTED / COMPLIANCE BASELINE  
-**Author:** Principal Information Security Auditor / National Cryptographic Compliance Officer
+**Classification:** INTERNAL DESIGN DOCUMENT
+**Author:** SpaceShield Engineering
+
+> **Documentation truth-audit note:** no STQC engagement or external audit
+> has occurred. This document was written in the voice of an official audit
+> manifest ("Officially Processed and Cryptographically Verified," "External
+> auditors interrogate...") but no external auditor has ever reviewed this
+> codebase. `zk_containment_prover.py` is implemented code, but its use
+> here to claim it "definitively satisf[ies] STQC oversight" describes a
+> hypothetical future audit interaction, not a completed one. Read the
+> claims below as architecture/design description, not audit results.
 
 ---
 
@@ -61,5 +70,5 @@ During an external STQC review or algorithmic calibration audit, the internal co
 * **Auditor Verifier Interaction:** External auditors interrogate only the secondary proof matrices. Because it is computationally infeasible and mathematically impossible to mathematically invert scalar statistical eigenvalues and blind variance metrics back into actionable raw baseband RF signals, the architecture guarantees absolute structural compliance and verified functionality without ever compromising the paramount signal intelligence perimeter.
 
 ---
-*STQC Compliance Review - Officially Processed and Cryptographically Verified.*  
+*Internal design self-assessment -- not an STQC review, not officially processed by any external body.*  
 **Directorate of Cryptographic Infrastructure Operations**

@@ -47,6 +47,43 @@ data/
 outputs/
 .env
 
+# Generated at runtime by scripts that resolve BASE_DIR relative to their
+# own file location; only backend/src/satcom_core/*.py is a real package,
+# so a script accidentally run from the wrong cwd/path in the past has
+# regenerated compliance logs and quarantined-model artifacts under
+# backend/ instead of the real, referenced top-level compliance/ dir.
+# Removed the stray copies once (see git history); ignored so they don't
+# quietly get re-tracked.
+backend/compliance/
+backend/quarantine/
+backend/src/compliance/
+backend/src/quarantine/
+.numba_cache/
+numba_cache/
+
 # Developer tools
 graphify-out/
 .agents/
+
+# Cryptographic key material.
+#
+# compliance/defense_root_private.pem, defense_root_public.pem, and
+# deployment_private.pem were committed to git history (see
+# scripts/secure_model_deployer.py and scripts/generate_release_manifest.py)
+# -- self-generated Ed25519 demo/bootstrap keys ("Bootstrapping Genesis
+# Defense Root Anchor... strictly for testing execution", per that script's
+# own comment), not externally-provisioned production credentials, but
+# committing ANY key material -- demo or real -- defeats the point of a
+# signing scheme: anyone who clones the repo could forge "validly signed"
+# artifacts under that identity. Both scripts already auto-generate a fresh
+# keypair locally if the files are missing, so untracking is safe and
+# sufficient going forward; nothing else in the repo depends on the specific
+# committed key. NOTE: the old keypair remains in git history (commits
+# a7ba117, 74e4acd) -- treat it as permanently compromised (never use it for
+# anything beyond local demo signing) and use `git filter-repo`/BFG if a
+# full history purge is ever required; that rewrite was not performed here
+# since it changes commit hashes and needs explicit sign-off.
+*.pem
+*.key
+*.p12
+*.pfx

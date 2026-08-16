@@ -131,5 +131,5 @@
     *   **Space Strategic Group (SSG) Alignment:** SpaceShield acts as an active physical-layer cybersecurity sensor that supports the institutionalization of the SSG, enabling real-time terminal audit transparency.
     *   **6-Hour Incident Compliance:** Edge-AI anomaly classification automates threat signature extraction, triggering containment procedures and delivering compliant reporting payloads to CERT-In within the mandatory 6-hour regulatory window.
     *   **Supply Chain Trust Assurance:** Adherence to the *National Security Directive on Telecommunication Sector* (NSDTS) guidelines, verifying SDR dependencies via CycloneDX SBOM declarations to guarantee zero unverified foreign elements.
-*   **Key Message:** Designed for sovereign strategic resilience, meeting 100% of the mandates in the February 2026 India Space Cyber Security Guidelines.
+*   **Key Message:** Designed for sovereign strategic resilience, targeting the mandates in the February 2026 India Space Cyber Security Guidelines. (Design target, not a certified or audited compliance determination.)
 

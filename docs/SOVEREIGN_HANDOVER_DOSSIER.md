@@ -1,12 +1,20 @@
 # Sovereign Space Cyber Security: SpaceShield Platform Handover Dossier
 **Prepared By:** Technical Director & Defense Procurement Operations  
-**Classification:** SENSITIVE / EXECUTIVE SIGN-OFF AUTHORIZED  
-**System Status:** GOLD-MASTER MATURE / AIR-GAPPED DEPLOYABLE  
+**Classification:** INTERNAL DESIGN DOCUMENT / NOT AN OFFICIAL SIGN-OFF  
+**System Status:** SIMULATION-VERIFIED PROTOTYPE (NOT hardware-in-the-loop tested, NOT third-party certified)
 
----
+> **Documentation truth-audit note:** this dossier was written in the voice of a
+> completed handover/sign-off document, but no formal certification, defense
+> procurement authorization, or STQC review has actually taken place, and no
+> physical SDR/antenna hardware has been used anywhere in this project --
+> every number in this document comes from the deterministic numpy/Numba
+> simulation pipeline. "Validated," "certifies," "AUTHORIZED," and similar
+> language below describes design intent and simulation results, not an
+> external audit outcome. Read it as an architecture description, not a
+> compliance record.
 
 ## 1. Executive Authorization & Handover Statement
-This dossier formally certifies the successful architectural completion, end-to-end integration, and rigorous operational testing of the SpaceShield Ground Station Edge Node across all 20 specialized development phases. Engineered exclusively to counter highly sophisticated Layer-1 RF spoofing and meaconing attack vectors, the platform now stands as an elite, defense-grade sovereign perimeter. The architecture strictly complies with the 2026 Space Cyber Security Framework and the Standardisation Testing and Quality Certification (STQC) mandates, delivering a resilient, mathematically impenetrable boundary protecting multi-million dollar satellite infrastructure.
+This dossier describes the architectural design, integration, and simulation-based testing of the SpaceShield Ground Station Edge Node concept. Engineered to counter Layer-1 RF spoofing and meaconing attack vectors in simulation, the platform's design targets the general shape of the 2026 Space Cyber Security Framework and STQC-style mandates -- it has not undergone an actual STQC review, and "impenetrable" below should be read as a design goal, not a demonstrated property.
 
 ---
 
@@ -22,7 +30,7 @@ This sub-millisecond envelope drives the Bartlett-corrected Generalized Likeliho
 ## 3. Multi-Layered Cryptographic Security & Forensic Isolation Architecture
 Compliance with modern defense frameworks necessitates that any detection event is immutably recorded for sovereign government threat-hunting, requiring absolute survivability even when the physical host is aggressively compromised.
 
-SpaceShield satisfies this mandate through the deployment of a high-velocity, lock-free SHA-256 WORM (Write-Once-Read-Many) tracking engine. Validated under intense electronic warfare simulator flooding (exceeding 10,000 localized alerts per second), the cryptographic serialization daemon proved zero lock-contention and strict memory bounding ($\approx 0.26 \text{ MB}$). Every generated payload hashes sequentially onto the preceding footprint, generating a structurally unbreakable cryptographic chain stored on strict non-root docker host-volume mounts.
+SpaceShield's design uses a high-velocity, lock-free SHA-256 WORM (Write-Once-Read-Many) tracking engine. Under a synthetic simulated-alert-flood test (exceeding 10,000 localized alerts per second, generated in software -- not a real electronic warfare environment), the cryptographic serialization daemon showed zero lock-contention and strict memory bounding ($\approx 0.26 \text{ MB}$) in that simulation run. Every generated payload hashes sequentially onto the preceding footprint, generating a structurally unbreakable cryptographic chain stored on strict non-root docker host-volume mounts.
 
 In the event of catastrophic blackout or catastrophic hardware collapse, the Disaster Recovery Bootstrapper runs exclusively on the cold boot. It rigorously traverses the last 50 forensic ledgers, mathematically recalculating every SHA-256 signature to guarantee zero byte-level tampering occurred offline. Should any structural discrepancy emerge—indicating an adversary breached the storage boundary—the autonomous recovery engine deliberately drops the active POSIX Ethernet interfaces (`ip link set eth0 down`), collapsing the machine into a hard-isolated panic state to prevent the spread of a compromised operating baseline across the wider cluster mesh.
 
@@ -38,6 +46,6 @@ To eliminate the Single Point of Failure (SPoF) risk entirely, the system coordi
 ---
 
 ## 5. Final Director's Sign-Off
-The SpaceShield platform design is mathematically sound, cryptographically sealed, and operationally boundless. The codebase is packaged, digitally signed via local `Ed25519` asymmetric deployment keys, and permanently sealed for secure STQC air-gapped activation. 
+The SpaceShield platform design is internally consistent and the release manifest is cryptographically signed via locally-generated `Ed25519` deployment keys (see compliance/ for key-hygiene notes -- these are demo/bootstrap keys, not a provisioned production root of trust). This signature demonstrates the release artifact matches what was built; it is not an STQC certification and does not authorize deployment.
 
-**VERDICT: DEPLOYMENT AUTHORIZED.**
+**STATUS: SIMULATION-VERIFIED PROTOTYPE. NOT DEPLOYMENT-AUTHORIZED. No physical hardware-in-the-loop testing or third-party certification has been performed.**

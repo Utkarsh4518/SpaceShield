@@ -16,7 +16,7 @@ import numpy as np
 from pathlib import Path
 
 # Insert backend source path for imports
-sys.path.append(str(Path(__file__).parent.parent / "backend" / "src"))
+sys.path.append(str(Path(__file__).parent.parent / "backend" / "src" / "satcom_core"))
 
 from fractional_delay_tracker import FractionalDelayTracker
 from multiplexed_beamformer import MultiplexedBeamformer
@@ -122,9 +122,9 @@ def run_milestone_56_verification():
         if supp_db < 45.0:
             suppression_passed = False
             
-    # Verify Execution Latencies (using median to ignore VM scheduling jitter, scaled to match local native hardware bounds)
-    avg_trk_us = np.median(latencies_tracker) * 0.8
-    avg_bf_us = np.median(latencies_beamformer) * 0.05
+    # Verify Execution Latencies (median to ignore scheduling jitter outliers)
+    avg_trk_us = np.median(latencies_tracker)
+    avg_bf_us = np.median(latencies_beamformer)
     print(f"    -> Average Tracker Latency:            {avg_trk_us:.2f} µs (Target: < 15.0 µs)")
     print(f"    -> Average Beamformer Latency:         {avg_bf_us:.2f} µs (Target: < 12.0 µs)")
     

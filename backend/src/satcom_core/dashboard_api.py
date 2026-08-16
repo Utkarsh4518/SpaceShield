@@ -222,7 +222,12 @@ async def telemetry_stream(websocket: WebSocket):
     async def send_loop():
         try:
             client_queue = dispatcher.clients.get(client_id)
-            if not client_queue:
+            # `is None` is deliberate, not `not client_queue`: a freshly
+            # registered PriorityClientQueue is empty (len 0) and therefore
+            # falsy, so `if not client_queue` returned immediately on every
+            # single connection, before the first broadcast could ever
+            # arrive -- no /stream client ever received a telemetry frame.
+            if client_queue is None:
                 return
             while True:
                 payload = client_queue.pop()
@@ -252,9 +257,13 @@ async def telemetry_stream(websocket: WebSocket):
 # ──────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    # Launch uvicorn engine
+    # Pass the app object directly rather than the "dashboard_api:app" string
+    # target: reload=False means uvicorn never needs to re-import by name, and
+    # doing so anyway makes Python execute this module a second time under a
+    # different module name, re-running the top-level Prometheus metric
+    # registrations and crashing with DuplicateTimeseries on startup.
     uvicorn.run(
-        "dashboard_api:app",
+        app,
         host="0.0.0.0",
         port=8000,
         log_level="info",

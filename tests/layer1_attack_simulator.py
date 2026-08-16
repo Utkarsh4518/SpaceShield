@@ -12,7 +12,7 @@ import json
 import numpy as np
 
 # Adjust sys.path to access the backend algorithms
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../backend/src')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../backend/src/satcom_core')))
 
 try:
     from spatial_glrt_detector import SpatialGLRTDetector

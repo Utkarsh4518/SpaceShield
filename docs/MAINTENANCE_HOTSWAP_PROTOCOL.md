@@ -78,4 +78,4 @@ tail -f /app/data/spaceshield_180day_security.log | grep "Absorber Parity Reache
 ```
 
 ## 5. Formal Conclusion
-SpaceShield ensures that active, adversarial RF environments cannot exploit maintenance windows. The architecture provides true 100.00% physical signal ingestion uptime, maintaining strict compliance with defense-grade mission-critical continuity protocols.
+SpaceShield's hot-swap design goal is that active, adversarial RF environments cannot exploit maintenance windows. In simulation, the architecture provides continuous signal ingestion across simulated hot-swap events; this has not been measured against physical signal ingestion (no hardware has been used), so "100.00% uptime" is a design target, not a measured or certified result.
