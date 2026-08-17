@@ -234,7 +234,7 @@ def execute_master_signoff():
         print("    -> [PASS] Zero-Knowledge Auditing Matrix Sealed.")
         
         # Serialize Gold Master to WORM Ledger
-        status_flag = "GOLD_MASTER_CERTIFIED" if all(signoff_matrix.values()) else "INTEGRATION_FAULT"
+        status_flag = "SIMULATION_BASELINE_VERIFIED" if all(signoff_matrix.values()) else "INTEGRATION_FAULT"
         terminal_hash = update_worm_ledger(status_flag, signoff_matrix)
         
         signoff_matrix["WORM_Ledger_Integrity"] = True
@@ -257,8 +257,10 @@ def execute_master_signoff():
         
     print("===============================================================================")
     if all_pass:
-        print("[SUCCESS] SPACE-SHIELD GOLD-MASTER BASELINE VERIFIED AND CERTIFIED.")
-        print("System is cleared for absolute remote deployment and orbital insertion.")
+        print("[SUCCESS] SPACE-SHIELD SIMULATION INTEGRATION BASELINE VERIFIED.")
+        print("All simulated DSP integration stages passed. NOTE: this is a")
+        print("simulation-only signoff -- not third-party certified, not")
+        print("hardware/HIL-validated, and not a deployment clearance.")
     else:
         print("[ERROR] MASTER INTEGRATION FAILED. Investigate Component Faults.")
     print("===============================================================================")

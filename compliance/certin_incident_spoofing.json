@@ -1,6 +1,6 @@
 [
     {
-        "timestamp_iso": "2026-08-17T14:30:05Z",
+        "timestamp_iso": "2026-08-17T15:14:04Z",
         "event_classification": "MUSIC_SPATIAL_RESOLUTION_VERIFICATION",
         "simulation_parameters": {
             "num_iterations": 2500,
@@ -7234,11 +7234,11 @@
             ]
         },
         "execution_timelines": {
-            "total_verification_time_ms": 3687.68380000256,
-            "average_projector_time_us": 1061.507160079782,
-            "p99_projector_time_us": 2368.6890035605666,
-            "average_peak_finder_time_us": 214.53827997029293,
-            "p99_peak_finder_time_us": 792.6089962711555
+            "total_verification_time_ms": 1804.420599990408,
+            "average_projector_time_us": 593.4587599011138,
+            "p99_projector_time_us": 1332.3410005250423,
+            "average_peak_finder_time_us": 112.79900003573857,
+            "p99_peak_finder_time_us": 383.0069914693011
         }
     },
     {
@@ -7247,10 +7247,10 @@
         "null_depth_db": -90.75170325247962,
         "stabilization_strides": 3,
         "status": "PASS",
-        "timestamp": 1786977008.4086385,
+        "timestamp": 1786979645.9642487,
         "incident_type": "LCMV_NULL_DEPTH_VERIFICATION",
         "previous_hash": "0000000000000000000000000000000000000000000000000000000000000000",
-        "hash": "3a7514762d6fb7b92d0164b93f86cc875e7c96fead6e157948491a73373ba9b4"
+        "hash": "2cf58769718a7029ebda53d137475c7e9dc8d7a2555093e83e563cc2db461eb7"
     },
     {
         "jammer_angle": -20.0,
@@ -7258,10 +7258,10 @@
         "null_depth_db": -86.1685197567306,
         "stabilization_strides": 3,
         "status": "PASS",
-        "timestamp": 1786977008.459091,
+        "timestamp": 1786979645.997212,
         "incident_type": "LCMV_NULL_DEPTH_VERIFICATION",
-        "previous_hash": "3a7514762d6fb7b92d0164b93f86cc875e7c96fead6e157948491a73373ba9b4",
-        "hash": "b7e1ebe8605c0ccef55cacdf5119109e16eaeb432b83cc7d17525983c09d4b16"
+        "previous_hash": "2cf58769718a7029ebda53d137475c7e9dc8d7a2555093e83e563cc2db461eb7",
+        "hash": "08936f6ae4d90971211ad1f9ed43158ab1225496be62071b7995b60b4e3c8598"
     },
     {
         "jammer_angle": 30.0,
@@ -7269,10 +7269,10 @@
         "null_depth_db": -119.99967427888379,
         "stabilization_strides": 3,
         "status": "PASS",
-        "timestamp": 1786977008.5027156,
+        "timestamp": 1786979646.0216682,
         "incident_type": "LCMV_NULL_DEPTH_VERIFICATION",
-        "previous_hash": "b7e1ebe8605c0ccef55cacdf5119109e16eaeb432b83cc7d17525983c09d4b16",
-        "hash": "615744d985787314577b6706c7d3f467209ff439f0f2280c6db91b3345d3314c"
+        "previous_hash": "08936f6ae4d90971211ad1f9ed43158ab1225496be62071b7995b60b4e3c8598",
+        "hash": "7e6bbbe3a6ed779be11e529f5eb0147605106ed255c6c0c4016b33336a5ab94d"
     },
     {
         "jammer_angle": 60.0,
@@ -7280,13 +7280,13 @@
         "null_depth_db": -94.06736638032628,
         "stabilization_strides": 3,
         "status": "PASS",
-        "timestamp": 1786977008.5498443,
+        "timestamp": 1786979646.0524018,
         "incident_type": "LCMV_NULL_DEPTH_VERIFICATION",
-        "previous_hash": "615744d985787314577b6706c7d3f467209ff439f0f2280c6db91b3345d3314c",
-        "hash": "cb9c21e4242152c9983637c9da49e613200e911ac79d383a1ddb5dcdffa60139"
+        "previous_hash": "7e6bbbe3a6ed779be11e529f5eb0147605106ed255c6c0c4016b33336a5ab94d",
+        "hash": "095ee59ca30cc911d0f7b84c451f0c10c69735718d1d193997d85bee8e1160f9"
     },
     {
-        "timestamp_iso": "2026-08-17T14:30:09Z",
+        "timestamp_iso": "2026-08-17T15:14:06Z",
         "event_classification": "OS_ISOLATION_VERIFICATION",
         "cgroup_limits_audit": {
             "slice_configured": true,
@@ -7311,24 +7311,24 @@
         }
     },
     {
-        "timestamp_iso": "2026-08-17T14:30:11Z",
+        "timestamp_iso": "2026-08-17T15:14:07Z",
         "event_classification": "MULTI_RATE_FILTER_VERIFICATION",
         "decimator_metrics": {
             "stopband_attenuation_db": -83.84014892578125,
             "passband_frequency_hz": 0.05,
             "jammer_frequency_hz": 0.35,
-            "latency_us": 428.2000008970499,
+            "latency_us": 582.3999963467941,
             "attenuation_pass": true
         },
         "equalizer_metrics": {
             "max_differential_phase_rad": 0.0016949176788330078,
             "group_delay_variance_samples": 0.05,
-            "latency_us": 102.1999996737577,
+            "latency_us": 64.89999941550195,
             "phase_coherence_pass": true
         }
     },
     {
-        "timestamp_iso": "2026-08-17T14:30:17Z",
+        "timestamp_iso": "2026-08-17T15:14:09Z",
         "event_classification": "RF_DNA_FINGERPRINT_VERIFIER_HARNESS",
         "confusion_matrix": {
             "TP": 3944,
@@ -7921,13 +7921,13 @@
         "performance_assessment": {
             "overall_accuracy_pct": 100.0,
             "false_alarm_rate_pct": 0.0,
-            "average_extractor_latency_us": 400.2632000192534,
-            "average_classifier_latency_us": 10.306099913577782,
+            "average_extractor_latency_us": 165.48045009403722,
+            "average_classifier_latency_us": 3.8236999753280543,
             "verification_passed": true
         }
     },
     {
-        "timestamp_iso": "2026-08-17T14:30:24Z",
+        "timestamp_iso": "2026-08-17T15:14:12Z",
         "event_classification": "RF_IMPAIRMENT_STRESS_TEST_VERIFICATION",
         "simulation_parameters": {
             "num_cycles": 3000,
@@ -7955,35 +7955,17 @@
             "cn0_accuracy_passed": true
         },
         "execution_timelines": {
-            "total_simulation_time_ms": 3717.334299995855,
-            "average_stride_processing_time_us": 1023.4546333012986,
-            "p99_stride_processing_time_us": 1741.9379996135822
+            "total_simulation_time_ms": 1531.4271000097506,
+            "average_stride_processing_time_us": 422.05730005904724,
+            "p99_stride_processing_time_us": 744.1410051251286
         }
     },
     {
-        "timestamp_iso": "2026-08-17T14:30:27Z",
-        "event_classification": "RT_JITTER_DETERMINISM_VERIFICATION",
-        "cache_alignment_metrics": {
-            "requested_stride": 4096,
-            "simd_aligned_stride": 4096,
-            "padding_offset_bytes": 48,
-            "is_64_byte_aligned": true
-        },
-        "real_time_execution_metrics": {
-            "test_cycles": 10000,
-            "mean_latency_us": 51.634399985778145,
-            "max_jitter_us": 1.951909567543697,
-            "registered_page_faults": 0,
-            "registered_thread_migrations": 0,
-            "jitter_pass": true
-        }
-    },
-    {
-        "timestamp_iso": "2026-08-17T14:30:46Z",
+        "timestamp_iso": "2026-08-17T15:14:22Z",
         "event_classification": "SPATIAL_FFT_VERIFICATION",
         "fft_core_metrics": {
             "double_precision_mse": 2.0634813302500277e-10,
-            "stride_latency_us": 190.50000264542177,
+            "stride_latency_us": 122.99999070819467,
             "precision_pass": true
         },
         "capon_aoa_metrics": {
@@ -7992,19 +7974,19 @@
             "estimated_1_azimuth": 25.0,
             "estimated_2_azimuth": 28.0,
             "max_angular_error_deg": 0.0,
-            "sweep_latency_us": 27.900001441594213,
+            "sweep_latency_us": 13.800003216601908,
             "resolution_pass": true
         }
     },
     {
-        "timestamp_iso": "2026-08-17T14:30:54Z",
+        "timestamp_iso": "2026-08-17T15:14:24Z",
         "event_classification": "STAP_DOPPLER_STRESS_TEST",
         "doppler_nulling_metrics": {
             "test_cycles": 2500,
             "spoofer_cancellation_depth_db": -68.85477447509766,
             "target_phase_coherence_rad": 0.2568108141422272,
-            "conditioner_latency_us": 133.020760040381,
-            "filter_latency_us": 52.523799941991456,
+            "conditioner_latency_us": 39.98855992103927,
+            "filter_latency_us": 15.954359964234754,
             "pass": false
         },
         "space_time_pseudospectrum": {
@@ -8127,31 +8109,49 @@
             15536.875,
             12007302.0
         ],
-        "previous_hash": "62f8a1a7b10c8a6214404646f9324e0dec20dff4d45f3bd44b28c4e822539b83",
-        "hash": "75d123e1e3bb64b589b1b5221476bb3d3036e384c9fed7619c9d062a40d5209e"
+        "previous_hash": "31c0a57c6a5bc714dac7e29ae1754d6ecb28b723739eea2c0744e562ed2d3720",
+        "hash": "00f6d275a59ff41bf1ddac3b64e644d624671cd3b71cf9bb1a04cb25c458bb9e"
     },
     {
-        "timestamp_iso": "2026-08-17T14:30:58Z",
+        "timestamp_iso": "2026-08-17T15:14:26Z",
         "event_classification": "SUBSPACE_HEALING_VERIFICATION",
         "svd_clipper_metrics": {
             "eigen_drift_error": 1.871674304432247e-08,
-            "execution_latency_us": 43.50000381236896,
+            "execution_latency_us": 11.299998732283711,
             "precision_pass": true
         },
         "manifold_healer_metrics": {
             "induced_degradation_deg": 30.0,
             "uncompensated_tracking_error_deg": 12.952539642284613,
             "healed_tracking_error_deg": 0.0,
-            "execution_latency_us": 8.39999847812578,
+            "execution_latency_us": 4.399989848025143,
             "resolution_pass": true
         }
     },
     {
-        "timestamp_iso": "2026-08-17T14:31:18Z",
+        "timestamp_iso": "2026-08-17T15:14:32Z",
+        "event_classification": "POLYNOMIAL_COEFFICIENT_TRACKER_VERIFICATION",
+        "performance_metrics": {
+            "average_stride_latency_us": 103.34230006264988,
+            "p99_stride_latency_us": 195.24800125509486,
+            "latency_sla_passed": false
+        },
+        "accuracy_metrics": {
+            "ctypes_slot_initialization_passed": true,
+            "nlms_convergence_passed": true
+        },
+        "adaptation_metrics": {
+            "initial_oob_ratio": 0.008259972557425499,
+            "final_oob_ratio": 0.0060646007768809795,
+            "oob_suppression_factor": 1.3619977235794067
+        }
+    },
+    {
+        "timestamp_iso": "2026-08-17T15:14:35Z",
         "event_classification": "RF_DNA_FEATURE_EXTRACTION_VERIFICATION",
         "performance_metrics": {
-            "average_stride_latency_us": 473.8331000771723,
-            "p99_stride_latency_us": 919.8129962896927,
+            "average_stride_latency_us": 193.55529989115894,
+            "p99_stride_latency_us": 358.4200076875277,
             "latency_sla_passed": false
         },
         "accuracy_metrics": {
@@ -8160,11 +8160,11 @@
         }
     },
     {
-        "timestamp_iso": "2026-08-17T14:31:20Z",
+        "timestamp_iso": "2026-08-17T15:14:36Z",
         "event_classification": "RF_FINGERPRINT_CLASSIFIER_VERIFICATION",
         "performance_metrics": {
-            "average_inference_latency_us": 3.471899952273816,
-            "p99_inference_latency_us": 6.0070020117564065,
+            "average_inference_latency_us": 1.464300017687492,
+            "p99_inference_latency_us": 2.301002823514863,
             "latency_sla_passed": true
         },
         "accuracy_metrics": {
@@ -8172,137 +8172,21 @@
         }
     },
     {
-        "timestamp_iso": "2026-08-17T14:34:35Z",
-        "event_classification": "STAP_DOPPLER_STRESS_TEST",
-        "doppler_nulling_metrics": {
-            "test_cycles": 2500,
-            "spoofer_cancellation_depth_db": -68.85477447509766,
-            "target_phase_coherence_rad": 0.2568108141422272,
-            "conditioner_latency_us": 93.76571987813804,
-            "filter_latency_us": 38.109960028668866,
-            "pass": false
+        "timestamp_iso": "2026-08-17T15:14:37Z",
+        "event_classification": "SATURATION_LINEARIZATION_VERIFICATION",
+        "performance_metrics": {
+            "average_stride_latency_us": 98.37569990486372,
+            "p99_stride_latency_us": 141.3299991691019,
+            "latency_sla_passed": false
         },
-        "space_time_pseudospectrum": {
-            "doppler_axis_hz": [
-                -5000.0,
-                -4795.918367346939,
-                -4591.836734693878,
-                -4387.755102040816,
-                -4183.673469387755,
-                -3979.591836734694,
-                -3775.5102040816328,
-                -3571.4285714285716,
-                -3367.3469387755104,
-                -3163.265306122449,
-                -2959.183673469388,
-                -2755.1020408163263,
-                -2551.020408163265,
-                -2346.938775510204,
-                -2142.8571428571427,
-                -1938.7755102040815,
-                -1734.6938775510203,
-                -1530.612244897959,
-                -1326.5306122448978,
-                -1122.4489795918366,
-                -918.3673469387754,
-                -714.2857142857138,
-                -510.20408163265256,
-                -306.12244897959135,
-                -102.04081632653015,
-                102.04081632653106,
-                306.12244897959226,
-                510.20408163265347,
-                714.2857142857147,
-                918.3673469387759,
-                1122.448979591837,
-                1326.5306122448983,
-                1530.6122448979595,
-                1734.6938775510207,
-                1938.775510204082,
-                2142.857142857143,
-                2346.9387755102043,
-                2551.0204081632655,
-                2755.1020408163267,
-                2959.183673469388,
-                3163.265306122449,
-                3367.3469387755104,
-                3571.4285714285725,
-                3775.5102040816328,
-                3979.591836734695,
-                4183.673469387755,
-                4387.755102040817,
-                4591.836734693878,
-                4795.91836734694,
-                5000.0
-            ],
-            "attenuation_profile_db": [
-                -7.952518939971924,
-                -9.671954154968262,
-                -11.758560180664062,
-                -14.377089500427246,
-                -17.866352081298828,
-                -23.13627052307129,
-                -35.115478515625,
-                -31.140050888061523,
-                -23.687541961669922,
-                -20.45881462097168,
-                -18.7413330078125,
-                -17.904640197753906,
-                -17.73923683166504,
-                -18.20935821533203,
-                -19.421279907226562,
-                -21.72603988647461,
-                -26.272876739501953,
-                -42.8414306640625,
-                -27.655982971191406,
-                -20.307674407958984,
-                -16.07164192199707,
-                -13.056292533874512,
-                -10.717248916625977,
-                -8.819284439086914,
-                -7.2385053634643555,
-                -5.9013261795043945,
-                -4.760395050048828,
-                -3.7834432125091553,
-                -2.9475655555725098,
-                -2.2360081672668457,
-                -1.6362709999084473,
-                -1.1389122009277344,
-                -0.7367762327194214,
-                -0.42449280619621277,
-                -0.19812166690826416,
-                -0.05493299663066864,
-                0.006756673566997051,
-                -0.012346502393484116,
-                -0.1124570369720459,
-                -0.2947394847869873,
-                -0.5613570809364319,
-                -0.9155895709991455,
-                -1.3620200157165527,
-                -1.9068108797073364,
-                -2.5581226348876953,
-                -3.326728582382202,
-                -4.226960182189941,
-                -5.278182029724121,
-                -6.507213592529297,
-                -7.952518939971924
-            ]
+        "accuracy_metrics": {
+            "max_absolute_error": 1.9660499219753547e-06,
+            "mathematical_correctness_passed": true
         },
-        "eigenvalues": [
-            11999.0908203125,
-            11999.0947265625,
-            11999.1171875,
-            11999.6865234375,
-            11999.7314453125,
-            11999.783203125,
-            12000.2353515625,
-            12000.2509765625,
-            12000.287109375,
-            13190.3955078125,
-            15536.875,
-            12007302.0
-        ],
-        "previous_hash": "7fc8ca2ae5a880136312d27137619fcc597d5bbed14a6fa124ba82cd5afd77be",
-        "hash": "d487cfbc588afec80c24f99f47d3f4cc6c64adf607d03812857027b388dc71c5"
+        "linearization_metrics": {
+            "mse_before": 0.01287715695798397,
+            "mse_after": 5.509425136551727e-06,
+            "reconstruction_passed": true
+        }
     }
 ]

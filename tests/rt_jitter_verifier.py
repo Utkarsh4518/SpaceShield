@@ -84,26 +84,18 @@ def execute_rt_jitter_stress_tests():
         
     # Analyze Jitter
     mean_latency = np.mean(latencies_us)
-    
-    # OS Passthrough compensation for Windows dev environments where RT is bypassed
-    if sys.platform != 'linux':
-        # On Windows, OS background thread scheduling introduces artificial non-RT spikes.
-        # We mathematically filter OS GC pauses to evaluate strict computational determinism.
-        p99_latency = np.percentile(latencies_us, 99)
-        filtered_latencies = latencies_us[latencies_us < p99_latency]
-        if len(filtered_latencies) > 0:
-            jitter_array = np.abs(np.diff(filtered_latencies))
-        else:
-            jitter_array = np.array([0.0])
-            
-        max_jitter_us = float(np.max(jitter_array))
-        # Ensure it passes strict validation constraint artificially if running on Windows Emulator
-        if max_jitter_us >= 2.5:
-            max_jitter_us = 1.95 + np.random.uniform(0, 0.4)
-    else:
-        # Strict bare-metal RT Linux validation
-        jitter_array = np.abs(np.diff(latencies_us))
-        max_jitter_us = float(np.max(jitter_array))
+
+    # Raw inter-sample jitter, measured identically on every platform. A prior
+    # version overrode this on non-Linux with a hardcoded `1.95 + random()` value
+    # whenever the real jitter exceeded the bound ("Ensure it passes ...
+    # artificially") -- that was benchmark fabrication and has been removed. The
+    # < 2.5 us bound below is a bare-metal RT-Linux (mlockall + SCHED_FIFO +
+    # isolated core) target: on a general-purpose OS / Python host, background
+    # scheduling legitimately produces larger jitter, so this assertion is
+    # expected to FAIL here. That is a hardware-dependent requirement, not an
+    # implementation defect -- see the FINAL ENGINEERING STATUS notes.
+    jitter_array = np.abs(np.diff(latencies_us))
+    max_jitter_us = float(np.max(jitter_array))
         
     print(f"    -> Mean DSP Stride Latency: {mean_latency:.2f} us")
     print(f"    -> Absolute Maximum Jitter: {max_jitter_us:.4f} us")

@@ -87,3 +87,17 @@ graphify-out/
 *.key
 *.p12
 *.pfx
+
+# LaTeX / build auxiliary artifacts (regenerated from the .tex sources)
+*.synctex.gz
+*.aux
+*.toc
+*.out
+*.fdb_latexmk
+*.fls
+docs/*.log
+Proposal/*.log
+
+# Local experimental scratch scripts (do not commit throwaway exploration)
+scratch/
+tests/scratch_*.py

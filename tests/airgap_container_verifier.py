@@ -34,13 +34,13 @@ def execute_airgap_container_stress_tests():
         subprocess.run(["docker", "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
         docker_available = True
     except Exception:
-        print("[WARN] Docker daemon is unavailable on the local host. Utilizing Sandbox Bypass Mode.")
+        print("[WARN] Docker daemon is unavailable on the local host. container checks will be reported as UNVERIFIED.")
         
     if docker_available:
         # Check if image exists
         img_check = subprocess.run(["docker", "image", "inspect", image_name], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         if img_check.returncode != 0:
-            print(f"[WARN] Image {image_name} not found. Utilizing Sandbox Bypass Mode.")
+            print(f"[WARN] Image {image_name} not found. container checks will be reported as UNVERIFIED.")
             docker_available = False
         else:
             # Get Image Footprint
@@ -102,28 +102,25 @@ def execute_airgap_container_stress_tests():
         subprocess.run(["docker", "rm", "-f", container_name], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         
     else:
-        # -------------------------------------------------------------------------
-        # SANDBOX BYPASS MODE (Ensures CI/CD Pass when Docker is missing)
-        # -------------------------------------------------------------------------
-        print("\n[1] Initiating Simulated Isolated Cold Boot Sequence...")
-        time.sleep(0.45)
-        cold_start_latency = 0.45 + np.random.uniform(0.1, 0.3)
-        image_footprint_mb = 135.4 # Approximated slim container payload
-        
-        print(f"\n[2] Executing Active Extrusion Probes (Air-Gap Validation)...")
-        time.sleep(0.1)
-        airgap_verified = True
-        
-        
-    print(f"    -> Image Footprint Size:        {image_footprint_mb:.2f} MB")
-    print(f"    -> Service Cold Start Latency:  {cold_start_latency:.4f} seconds")
-    print(f"    -> Outbound External Sockets:   DROPPED / REFUSED")
-    print(f"    -> Network Air-Gap Integrity:   {'SECURE' if airgap_verified else 'COMPROMISED'}")
-    
-    assert cold_start_latency < 1.5, f"VERIFICATION FAILED: Cold start {cold_start_latency:.4f}s exceeds 1.5s threshold."
-    assert airgap_verified, "VERIFICATION FAILED: Container successfully routed traffic to external DNS."
-    
-    print("    [PASS] Air-gapped boundary structurally verified against external data leaks.")
+        # Docker or the image is unavailable: the container cold-start and the
+        # network air-gap CANNOT be verified from this host. We do NOT fabricate a
+        # passing result. A prior "Sandbox Bypass Mode" faked
+        # `cold_start_latency = 0.45 + random()` and `airgap_verified = True` here
+        # to force a CI/CD pass -- that was a fabricated pass and has been removed.
+        print("\n[SKIP] Docker/image unavailable -- container cold-start and network")
+        print("       air-gap isolation were NOT verified on this host.")
+
+    if docker_available:
+        print(f"    -> Image Footprint Size:        {image_footprint_mb:.2f} MB")
+        print(f"    -> Service Cold Start Latency:  {cold_start_latency:.4f} seconds")
+        print(f"    -> Outbound External Sockets:   DROPPED / REFUSED")
+        print(f"    -> Network Air-Gap Integrity:   {'SECURE' if airgap_verified else 'COMPROMISED'}")
+        assert cold_start_latency < 1.5, f"VERIFICATION FAILED: Cold start {cold_start_latency:.4f}s exceeds 1.5s threshold."
+        assert airgap_verified, "VERIFICATION FAILED: Container successfully routed traffic to external DNS."
+        print("    [PASS] Air-gapped boundary structurally verified against external data leaks.")
+    else:
+        print(f"    -> Container Cold Start / Air-Gap: NOT VERIFIED (Docker unavailable)")
+        print("    [SKIP] Container isolation not asserted -- Docker unavailable; reported honestly as unverified.")
     
     # -------------------------------------------------------------------------
     # TEST 3: Cryptographic WORM Signatures
@@ -134,15 +131,16 @@ def execute_airgap_container_stress_tests():
     log_event = {
         "timestamp_iso": time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
         "event_classification": "AIRGAP_CONTAINER_VERIFICATION",
+        "container_verification_status": "VERIFIED" if docker_available else "UNVERIFIED_DOCKER_ABSENT",
         "container_boot_metrics": {
-            "image_footprint_mb": float(image_footprint_mb),
-            "cold_start_latency_s": float(cold_start_latency),
-            "boot_latency_pass": bool(cold_start_latency < 1.5)
+            "image_footprint_mb": float(image_footprint_mb) if docker_available else None,
+            "cold_start_latency_s": float(cold_start_latency) if docker_available else None,
+            "boot_latency_pass": bool(cold_start_latency < 1.5) if docker_available else None
         },
         "network_isolation_metrics": {
-            "external_dns_dropped": bool(airgap_verified),
-            "external_sockets_dropped": bool(airgap_verified),
-            "airgap_pass": bool(airgap_verified)
+            "external_dns_dropped": bool(airgap_verified) if docker_available else None,
+            "external_sockets_dropped": bool(airgap_verified) if docker_available else None,
+            "airgap_pass": bool(airgap_verified) if docker_available else None
         }
     }
     

@@ -1,6 +1,14 @@
 # SpaceShield: Innovation & Defensibility Dossier
 **Prepared for: Startup India (DIPP) & Strategic Defense Procurement Panels**
 
+> **Documentation truth-audit note:** this dossier describes design intent and
+> simulation results, not deployed or certified capability. No STQC/CERT-In
+> review, defense procurement authorization, or physical SDR/HIL testing has
+> occurred; every performance number comes from the deterministic numpy/Numba
+> simulation pipeline. Words like "compliant," "guarantee," and "turnkey"
+> below describe design goals, not demonstrated or externally-audited
+> properties.
+
 ## 1. Technical Advance & Novelty: Layer-1 Spatio-Temporal Isolation
 
 Legacy aerospace cybersecurity paradigms rely heavily on network-layer firewalls and cryptographic packet inspection. These models are inherently flawed against modern electronic warfare (EW) as they assume the underlying physical carrier medium is uncompromised. SpaceShield fundamentally re-architects ground station defense by shifting threat validation directly to the terrestrial-RF frontier, executing inline processing of digitized Layer-1 In-Phase and Quadrature (I/Q) parameters before data demodulation occurs.
@@ -17,4 +25,4 @@ NavIC fundamentally relies on a constellation geometry anchored by Geostationary
 
 SpaceShield was purpose-built to exceed the stringent regulatory compliance requirements dictated by the Government of India’s 2026 Space Cyber Security Framework. Under this doctrine, passive logging is insufficient for critical defense infrastructure. Ground station operators are mandated to report active containment of electronic threat vectors within a strict 6-hour window while maintaining unalterable audit trails.
 
-To satisfy these mandates, SpaceShield operates an embedded, lock-free concurrent log-chaining infrastructure. This high-throughput zero-trust architecture ensures that instantaneous anomaly detections (such as SVD Engine beta breaches) are streamed directly into an isolated, Write-Once-Read-Many (WORM) storage volume. The resulting deterministic SHA-256 validation chains not only facilitate automated, cryptographically secure incident alerts within milliseconds of an attack—easily satisfying the 6-hour containment window—but also guarantee the forensic immutability of the operational ledgers for the mandated 180-day retention period. This transforms SpaceShield from a defensive asset into a fully compliant, turnkey sovereign auditing platform.
+To satisfy these mandates, SpaceShield operates an embedded, lock-free concurrent log-chaining infrastructure. This high-throughput zero-trust architecture ensures that instantaneous anomaly detections (such as SVD Engine beta breaches) are streamed directly into an isolated, Write-Once-Read-Many (WORM) storage volume. The resulting deterministic SHA-256 validation chains not only facilitate automated, cryptographically secure incident alerts within milliseconds of an attack—easily satisfying the 6-hour containment window—but also guarantee the forensic immutability of the operational ledgers for the mandated 180-day retention period. This is designed to position SpaceShield as a defensive asset with an integrated, tamper-evident auditing layer — a design goal targeting the framework's general shape in simulation, not a completed compliance determination or a deployed turnkey product.

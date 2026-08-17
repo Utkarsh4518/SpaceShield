@@ -143,27 +143,29 @@ def run_stap_doppler_verification():
     mean_cond_latency = np.mean(cond_latencies_us)
     mean_filt_latency = np.mean(filt_latencies_us)
     
-    # Compensate latencies for non-Linux platforms
-    import sys
-    comp_cond = mean_cond_latency
-    comp_filt = mean_filt_latency
-    if sys.platform != 'linux':
-        comp_cond = max(1.0, mean_cond_latency - 35.0)
-        comp_filt = max(1.0, mean_filt_latency - 15.0)
-        
+    # Latency is reported and asserted on the RAW measured value. A prior version
+    # subtracted a hardcoded 35 us / 15 us on non-Linux ("compensate for
+    # platform") before the assertion -- a magic-number fudge to slip under the
+    # limits, i.e. benchmark fabrication -- which has been removed. The < 28 us /
+    # < 20 us budgets are bare-metal RT-Linux targets; on a general-purpose
+    # Python/OS host (and especially under CPU throttling) the raw latency
+    # legitimately exceeds them, so the timing assertion is expected to FAIL here.
+    # That is a host/hardware-dependent requirement, not an implementation defect;
+    # the DSP correctness checks (cancellation depth, timing coherence) are
+    # host-independent and still hold.
     # Convert phase error to timing error in microseconds: (phase_rad / 2pi) * Ts_us
     mean_time_error_us = (mean_phase_error / (2.0 * np.pi)) * (1e6 / fs)
-    
+
     print("\n[VERIFY] Performance Summary:")
     print(f"    -> Average Spoofer Cancellation:  {mean_cancellation_db:.2f} dB (Limit: <= -50.0 dB)")
     print(f"    -> Average Target Timing Error:   {mean_time_error_us:.4f} us (Limit: < 10.0 us)")
-    print(f"    -> Avg Conditioner Latency:       {mean_cond_latency:.2f} us (Compensated: {comp_cond:.2f} us, Limit: < 28.0 us)")
-    print(f"    -> Avg Filter Latency:            {mean_filt_latency:.2f} us (Compensated: {comp_filt:.2f} us, Limit: < 20.0 us)")
-    
+    print(f"    -> Avg Conditioner Latency:       {mean_cond_latency:.2f} us (Limit: < 28.0 us, RT-Linux target)")
+    print(f"    -> Avg Filter Latency:            {mean_filt_latency:.2f} us (Limit: < 20.0 us, RT-Linux target)")
+
     # 4. Assert correctness
     cancellation_pass = mean_cancellation_db <= -50.0
     phase_pass = mean_time_error_us < 10.0
-    timing_pass = comp_cond < 28.0 and comp_filt < 20.0
+    timing_pass = mean_cond_latency < 28.0 and mean_filt_latency < 20.0
     all_passed = cancellation_pass and phase_pass and timing_pass
     
     # 5. Extract Pseudospectrum Slices and Eigenvalues for compliance logging
@@ -234,7 +236,7 @@ def run_stap_doppler_verification():
     
     # Print the cryptographic signoff signature for system audit trail
     print("\n===============================================================================")
-    audit_hash_material = f"Task52_Milestone_Signoff_{mean_cancellation_db:.4f}_{mean_time_error_us:.6f}_{comp_cond:.4f}_{comp_filt:.4f}"
+    audit_hash_material = f"Task52_Milestone_Signoff_{mean_cancellation_db:.4f}_{mean_time_error_us:.6f}_{mean_cond_latency:.4f}_{mean_filt_latency:.4f}"
     audit_sha = hashlib.sha256(audit_hash_material.encode('utf-8')).hexdigest()
     
     # Output audited milestone results
@@ -242,8 +244,8 @@ def run_stap_doppler_verification():
           f"Verified Modules: [stap_covariance_conditioner.py, stap_mvdr_filter.py, stap_doppler_verifier.py] | "
           f"Test Cycles: {NUM_CYCLES} | Spoofer Cancellation Depth: {mean_cancellation_db:.2f} dB (Limit: <= -50.0 dB) | "
           f"Target Timing Coherence: {mean_time_error_us:.4f} us (Limit: < 10.0 us) | "
-          f"Conditioner Latency: {comp_cond:.2f} us (Limit: < 28.0 us) | "
-          f"Filter Latency: {comp_filt:.2f} us (Limit: < 20.0 us) | "
+          f"Conditioner Latency: {mean_cond_latency:.2f} us (Limit: < 28.0 us) | "
+          f"Filter Latency: {mean_filt_latency:.2f} us (Limit: < 20.0 us) | "
           f"WORM Log Hash: {log_event['hash']} | Result: {'PASSED' if all_passed else 'FAILED'}")
     print("===============================================================================")
     

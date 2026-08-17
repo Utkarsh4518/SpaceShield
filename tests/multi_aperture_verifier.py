@@ -138,33 +138,34 @@ def run_verification():
     avg_aligner_us = np.mean(aligner_latencies)
     avg_synth_us = np.mean(synth_latencies)
     
-    # Platform compensation for non-RT Windows
-    is_rt_capable = sys.platform.startswith('linux')
-    if not is_rt_capable:
-        compensated_aligner_us = min(avg_aligner_us, 23.5 + np.random.uniform(0.0, 0.4))
-        compensated_synth_us = min(avg_synth_us, 9.5 + np.random.uniform(0.0, 0.4))
-    else:
-        compensated_aligner_us = avg_aligner_us
-        compensated_synth_us = avg_synth_us
-        
+    # Latency is asserted on the RAW measured value. A prior version replaced it
+    # on non-Linux with `min(measured, 23.5 + random())` / `min(measured,
+    # 9.5 + random())` -- clamping the reported number to always land just under
+    # the limit regardless of the real measurement -- which was benchmark
+    # fabrication and has been removed. The < 24 us / < 10 us budgets are
+    # bare-metal RT-Linux targets; on a general-purpose Python/OS host (and
+    # especially under CPU throttling) the raw latency legitimately exceeds them,
+    # so these two latency assertions are expected to FAIL here. That is a
+    # host/hardware-dependent requirement, not an implementation defect. The DSP
+    # correctness checks (phase, MRC gain, null depth) are host-independent.
     print("\n[VERIFY] Multi-Aperture Performance Results:")
     print(f"    -> Final Channel 1 Residual Phase: {final_phase_error:.6f} rad (Limit: <0.01 rad)")
     print(f"    -> Average MRC SNR Combining Gain: {avg_combining_gain:.4f} dB (Limit: {10*np.log10(M):.2f} dB +/- 0.2 dB)")
     print(f"    -> Hostile Jammer Spatial Null:    {null_depth_db:.2f} dB (Limit: <= -40.0 dB)")
-    print(f"    -> Aligner Average Latency:        {avg_aligner_us:.4f} us (Compensated: {compensated_aligner_us:.4f} us, Limit: <24.0 us)")
-    print(f"    -> Synthesizer Average Latency:    {avg_synth_us:.4f} us (Compensated: {compensated_synth_us:.4f} us, Limit: <10.0 us)")
-    
+    print(f"    -> Aligner Average Latency:        {avg_aligner_us:.4f} us (Limit: <24.0 us, RT-Linux target)")
+    print(f"    -> Synthesizer Average Latency:    {avg_synth_us:.4f} us (Limit: <10.0 us, RT-Linux target)")
+
     phase_ok = final_phase_error < 0.01
     gain_ok = abs(avg_combining_gain - 10 * np.log10(M)) < 0.2
     null_ok = null_depth_db <= -40.0
-    aligner_lat_ok = compensated_aligner_us < 24.0
-    synth_lat_ok = compensated_synth_us < 10.0
-    
+    aligner_lat_ok = avg_aligner_us < 24.0
+    synth_lat_ok = avg_synth_us < 10.0
+
     assert phase_ok, f"Residual phase offset error too large: {final_phase_error:.6f} rad"
     assert gain_ok, f"MRC combining gain mismatch: {avg_combining_gain:.4f} dB"
     assert null_ok, f"Jammer null depth insufficient: {null_depth_db:.2f} dB"
-    assert aligner_lat_ok, f"Aligner latency exceeded budget: {compensated_aligner_us:.4f} us"
-    assert synth_lat_ok, f"Synthesizer latency exceeded budget: {compensated_synth_us:.4f} us"
+    assert aligner_lat_ok, f"Aligner latency exceeded budget: {avg_aligner_us:.4f} us"
+    assert synth_lat_ok, f"Synthesizer latency exceeded budget: {avg_synth_us:.4f} us"
     
     print("\n[+] All multi-aperture verification criteria PASSED.")
     
@@ -181,7 +182,7 @@ def run_verification():
             "test_cycles": NUM_CYCLES,
             "final_residual_phase_rad": float(final_phase_error),
             "mean_aligner_latency_us": float(avg_aligner_us),
-            "compensated_aligner_latency_us": float(compensated_aligner_us),
+            "aligner_latency_passed": bool(aligner_lat_ok),
             "phase_alignment_passed": bool(phase_ok)
         },
         "synthesizer_performance": {
@@ -190,7 +191,7 @@ def run_verification():
             "jammer_response": float(jammer_resp),
             "null_depth_db": float(null_depth_db),
             "mean_synth_latency_us": float(avg_synth_us),
-            "compensated_synth_latency_us": float(compensated_synth_us),
+            "synth_latency_passed": bool(synth_lat_ok),
             "synthesizer_passed": bool(gain_ok and null_ok)
         },
         "profiles": {
@@ -230,7 +231,7 @@ def run_verification():
     print(f"    [PASS] Verification signatures committed to WORM ledger -> {LOG_PATH}")
     
     # 6. Print consolidated compliance auditing signature summary
-    print_compliance_summary(NUM_CYCLES, final_phase_error, avg_combining_gain, null_depth_db, compensated_aligner_us, compensated_synth_us, log_hash)
+    print_compliance_summary(NUM_CYCLES, final_phase_error, avg_combining_gain, null_depth_db, avg_aligner_us, avg_synth_us, log_hash)
 
 def print_compliance_summary(cycles, residual_phase, gain_db, null_depth, align_us, synth_us, log_hash):
     """Prints a concise, single-line cryptographic execution summary outlining Task 51 block metrics."""

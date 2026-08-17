@@ -1,7 +1,14 @@
 # SpaceShield: Hardware-in-the-Loop (HIL) Execution Playbook
-**Prepared By:** Site Reliability & Infrastructure Operations (SRE)  
-**Classification:** RESTRICTED / CORE INFRASTRUCTURE RUNBOOK  
-**Objective:** End-to-End Validation Protocol for the SpaceShield Air-Gapped EW Array
+**Prepared By:** SpaceShield Engineering
+**Classification:** INTERNAL PLANNING RUNBOOK (future/aspirational — not yet executed)
+**Objective:** Planned end-to-end validation procedure for a future SpaceShield hardware bring-up
+
+> **Documentation truth-audit note:** this playbook describes a HIL procedure
+> that **has not been performed**. No physical SDR, antenna array, clock
+> reference, or RF cabling has ever been used in this project — all results
+> elsewhere in the repository come from the deterministic numpy/Numba
+> simulation. Treat every step below as a forward-looking plan for hardware
+> that does not yet exist in this setup, not a record of completed testing.
 
 ---
 

@@ -1,8 +1,17 @@
 # STQC TECHNICAL EVALUATION & COMPLIANCE PROTOCOL
 
-**DOCUMENT CLASSIFICATION:** RESTRICTED / COMPLIANCE AUDIT  
-**PROJECT NOMENCLATURE:** SpaceShield Layer-1 Ground Station Defense Agent  
-**GOVERNING DIRECTIVE:** CERT-In 2026 Space Cyber Security Framework Guidelines  
+**DOCUMENT CLASSIFICATION:** INTERNAL DESIGN REFERENCE (self-authored test protocol, not an audit record)
+**PROJECT NOMENCLATURE:** SpaceShield Layer-1 Ground Station Defense Agent
+**GOVERNING DIRECTIVE:** Structured against the CERT-In 2026 Space Cyber Security Framework Guidelines (design reference only)
+
+> **Documentation truth-audit note:** this is a self-authored test/evaluation
+> protocol describing how the team exercises the design against the framework's
+> general shape. No STQC engagement or external audit has taken place, "validate"
+> below means the project's own simulation runs, and every procedure uses the
+> deterministic numpy/Numba pipeline and synthetic datasets — no physical
+> SDR/antenna hardware. Read it as a design/test reference, not a compliance
+> verdict.
+
 
 ## 1. PROBABILITY OF FALSE ALARM ($P_{\text{fa}}$) STRESS GUIDELINES
 

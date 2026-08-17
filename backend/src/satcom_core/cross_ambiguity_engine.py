@@ -254,16 +254,13 @@ if __name__ == "__main__":
     max_latency = max(latencies)
     p99_latency = np.percentile(latencies, 99)
     
-    # Timing compensation for Windows Emulator scheduling overhead
-    import sys
-    compensated_avg = avg_latency
-    if sys.platform != 'linux':
-        compensated_avg = max(1.0, avg_latency - 15.0)
-        print(f"[INFO] Running on non-Linux OS: timing metrics compensated (-15µs scheduler bias).")
-        
+    # Latency is reported and asserted on the RAW measured value. A prior version
+    # subtracted a hardcoded 15 us ("Windows scheduler bias compensation") before
+    # the assertion, which was a magic-number fudge; it has been removed. The
+    # < 35 us target is a host-dependent budget and may legitimately be exceeded
+    # on a general-purpose / throttled host.
     print("\n--- PERFORMANCE HUD ---")
-    print(f" [>] Raw Average Latency:       {avg_latency:.4f} µs")
-    print(f" [>] Compensated Latency:       {compensated_avg:.4f} µs (Target: < 35.00 µs)")
+    print(f" [>] Raw Average Latency:       {avg_latency:.4f} µs (Target: < 35.00 µs)")
     print(f" [>] P99 Latency:               {p99_latency:.4f} µs")
     print(f" [>] Max Latency:               {max_latency:.4f} µs")
     
@@ -284,7 +281,7 @@ if __name__ == "__main__":
     
     assert abs(detected_doppler - true_doppler) < 1e-3, "Doppler tracking peak calculation failed!"
     assert detected_lag == true_lag, "Code lag tracking peak calculation failed!"
-    assert compensated_avg < 35.0, f"Compensated processing latency ({compensated_avg:.2f} µs) exceeded 35µs limit."
+    assert avg_latency < 35.0, f"Processing latency ({avg_latency:.2f} µs) exceeded 35µs limit."
     
     print("\n[PASSED] Cross-Ambiguity Function JIT Engine validation tests cleared successfully!")
     print("===================================================================")
