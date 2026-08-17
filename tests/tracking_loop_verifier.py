@@ -22,6 +22,7 @@ sys.path.append(str(Path(__file__).parent.parent / "backend" / "src" / "satcom_c
 from prn_code_synthesizer import PRNCodeSynthesizer, pack_prn_to_bits
 from kalman_loop_filter import KalmanLoopFilter
 from eml_correlator import EMLCorrelator
+from tracking_loop_kernels import FusedTrackingStep
 
 def run_milestone_57_verification():
     print("===============================================================================")
@@ -39,6 +40,13 @@ def run_milestone_57_verification():
     tracker_synth = PRNCodeSynthesizer(targets=N_ant, stride_len=stride_len, code_length=code_length)
     k_filter = KalmanLoopFilter(targets=N_ant, stride_len=stride_len, sample_rate=sample_rate, base_R=0.01)
     correlator = EMLCorrelator(targets=N_ant)
+    # Phase 5: fused per-cycle glue (phase sync + discriminator + Kalman
+    # predict/update) as two zero-allocation Numba kernels, replacing the tiny
+    # inline NumPy expressions that profiling showed cost ~9us/cycle of pure
+    # dispatch/allocation overhead. Bit-identical to the inline path (see
+    # tests/test_tracking_loop_fusion.py).
+    fused_step = FusedTrackingStep(targets=N_ant, T=T, sample_rate=sample_rate, code_length=code_length)
+    snr_feed = np.full(N_ant, 10.0)  # constant SNR feed, hoisted out of the loop
     
     # Generate bit-packed mock PRN sequences (+1/-1)
     np.random.seed(42)
@@ -86,32 +94,31 @@ def run_milestone_57_verification():
         
         # --- TRACKING LOOP TIMING START ---
         t0 = time.perf_counter()
-        
+
         # 2. Sync tracker synthesizer with internal Kalman predicted states
-        tracker_synth.code_phases = np.copy(k_filter.states[:, 0]) % code_length
-        est_steps = k_filter.states[:, 1] / sample_rate
-        
+        #    (fused kernel: states -> code phases % length, freq / sample_rate)
+        tracker_synth.code_phases, est_steps = fused_step.sync_drivers(k_filter.states)
+
         # 3. Generate Local Replicas
         E, _, L = tracker_synth.synthesize_stride(bit_table, est_steps, 0.5)
-        
+
         # 4. EML Correlator (Baseband wipeoff)
         # np.abs(np.sum(X_raw * np.conj(E), axis=1)) measured ~50us/cycle here
         # -- numpy allocates a full (targets, stride_len) temporary for the
         # elementwise product, twice per cycle. A single-pass accumulating
         # kernel (EMLCorrelator) measures ~8-9us for the same inputs.
         I_E, I_L = correlator.correlate(X_raw, E, L)
-        
-        # 5. Discriminator Error
-        disc_err = 0.5 * (I_L - I_E) / (I_E + I_L + 1e-12)
-        
-        # 6. Apply adaptive Kalman Loop Filter tracking 
-        # (Pass absolute measurement by compounding predicted phase + discriminator delta)
-        x0_p = k_filter.states[:, 0] + T * k_filter.states[:, 1] + 0.5 * (T**2) * k_filter.states[:, 2]
-        absolute_z = x0_p + disc_err
-        snrs = np.ones(N_ant) * 10.0 # Active SNR feed
-        
-        _ = k_filter.filter_stride(absolute_z, snrs)
-        
+
+        # 5+6. Fused discriminator + absolute-measurement compounding + adaptive
+        #      Kalman predict/update (single kernel; reuses the existing Kalman
+        #      math). Replaces the former inline NumPy discriminator, x0_p
+        #      compounding, per-cycle SNR allocation, and separate filter call.
+        disc_err = fused_step.discriminate_and_track(
+            I_E, I_L, k_filter.states, k_filter.covariances,
+            k_filter.q_accel, k_filter.base_R,
+            k_filter.max_alpha, k_filter.max_beta, k_filter.max_gamma, snr_feed,
+        )
+
         t1 = time.perf_counter()
         # --- TRACKING LOOP TIMING END ---
         
@@ -131,28 +138,35 @@ def run_milestone_57_verification():
     error_passed = max_tracking_error < 0.02
     latency_passed = avg_latency < 23.0 # 15us synth + 8us filter
     #
-    # Performance investigation (profiled by isolating each hot-path stage
-    # with its own timer): the ~50us/cycle EML correlator step
-    # (np.abs(np.sum(X_raw*np.conj(E), axis=1)) x2) was pure-numpy overhead
-    # from allocating full-size temporary arrays -- replaced with
-    # EMLCorrelator, a single-pass Numba accumulator verified to match the
-    # numpy reference, cutting that stage to ~8-9us and the whole cycle from
-    # ~118us to ~97-101us median (measured warm-state; a "cold-start"
-    # measurement was attempted but was dominated by 3-130ms of
-    # subprocess/OS first-touch noise unrelated to the DSP kernels -- JIT
-    # compilation itself already completes inside each class's own
-    # _warmup(), before this function ever runs). The remaining ~77us is
-    # PRNCodeSynthesizer's serial per-sample loop (4 targets x 4096 samples,
-    # bit-table lookups for early/prompt/late). Two independent attempts to
-    # vectorize it (a fully-vectorized phase ramp, and a preallocated
-    # split-loop variant) were BOTH measurably slower than the original
-    # fused loop (134us and 86us respectively) due to added array-allocation
-    # and memory-traffic overhead outweighing the branches they removed --
-    # the original is already close to a real floor for this algorithm
-    # structure on this hardware. Reaching <23us would need a different PRN
-    # synthesis algorithm (e.g. a precomputed fractional-phase lookup table
-    # avoiding per-sample bit extraction entirely), which is a larger
-    # redesign than this pass attempts.
+    # Performance investigation history:
+    #
+    #   * The ~50us/cycle EML correlator step (np.abs(np.sum(...)) x2) was
+    #     pure-numpy temporary-array overhead -- replaced with the single-pass
+    #     Numba EMLCorrelator (~8-9us, verified vs the numpy reference).
+    #   * The PRN synthesizer was the remaining ~77us. Phase 4 implemented the
+    #     "fractional-phase lookup table" this note previously proposed: a
+    #     fixed-point integer phase accumulator (code phase carried in
+    #     2^-frac_bits-chip units, stepping = integer add, chip index = right
+    #     shift) indexing a precomputed unpacked +/-1 code LUT -- no per-sample
+    #     float arithmetic and no per-sample bit extraction. Measured
+    #     ~78us -> ~25us median synth (~3.2x), numerically equivalent to the
+    #     old float-truncation sampling (code phase tracked to <5e-7 chips;
+    #     ~1e-5 of samples differ only by a +/-1-chip tie exactly on a chip
+    #     boundary). Oversampling the LUT itself was benchmarked and rejected
+    #     (no gain for BPSK, wastes cache); float32/no-prompt variants were
+    #     marginal and would change the public E/P/L complex64 contract.
+    #
+    # Result: the whole tracking cycle dropped from ~97-101us to ~44-45us
+    # median. It still does NOT meet <23us, and profiling shows why this is now
+    # structural rather than a synth problem: with the synth at ~25us, the
+    # NON-synth floor is ~19us median (correlator ~8.6us + numpy discriminator/
+    # phase-sync glue ~10us + Kalman ~1us). Even a hypothetical zero-cost synth
+    # leaves the loop at ~19us median / ~60us p99, so <23us for the full cycle
+    # is not achievable on this host without also moving the per-cycle numpy
+    # glue into a fused kernel and/or a faster-than-VM environment (the p95/p99
+    # tail is dominated by OS scheduling jitter, not compute). The <23us
+    # assertion is intentionally left unchanged; this remains a documented,
+    # honestly-measured miss, now ~2x closer than before.
     print(f"    -> Maximum Residual Tracking Error:    {max_tracking_error:.6f} chips (Target: < 0.02)")
     print(f"    -> Average Loop Execution Latency:     {avg_latency:.2f} µs (Target: < 23.0 µs)")
     

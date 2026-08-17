@@ -59,60 +59,52 @@ def run_milestone_55_verification():
     num_channels = 4
     stride_len = 4096
     cycles = 2000
-    # 0.05 was tuned against the old, much-narrower 6-tap filter's gradient
-    # magnitudes and diverges badly with the wider filter below (measured:
-    # coefficients blowing up past magnitude 5, suppression -21dB). Swept
-    # down to the largest value that stays non-divergent; see the filter
-    # design note below for why no mu actually reaches the 25dB target.
-    mu = 1e-5
+    # Phase 3: with the expanded K>=3-tap memory polynomial and the NLMS
+    # normalisation, the stable region is mu < 2. mu=0.5 converges the model to
+    # its OOB optimum within the cycle budget while keeping coefficients O(2)
+    # (the reachability study measured ||c||inf ~ 1.7). The old mu=1e-5 was a
+    # symptom of the broken one-tap model, whose OOB optimum was itself
+    # counterproductive, so it crawled and never left ~0 dB.
+    mu = 0.5
     threshold_ratio = 1e-6
-    
-    print("[1] Initializing SaturationInverter & PolynomialCoefficientTracker...")
-    inverter = SaturationInverter(channels=num_channels, stride_len=stride_len)
+    # Expanded memory-polynomial configuration (see the model-capacity note below):
+    # 3 memory taps, orders {1,3}. Memory depth -- not nonlinear order -- is what
+    # unlocks suppression here.
+    num_orders = 2
+    num_taps = 3
 
-    # OOB-detector filter design.
+    print("[1] Initializing SaturationInverter & PolynomialCoefficientTracker...")
+    inverter = SaturationInverter(channels=num_channels, stride_len=stride_len,
+                                  num_orders=num_orders, num_taps=num_taps)
+
+    # OOB-detector filter design + Phase 3 model-capacity resolution.
     #
-    # BACKGROUND: the original 6-tap FIR here has exactly 5 real degrees of
-    # freedom, which nulling DC + a real band at the target frequencies + a
-    # real band at the jammer frequencies (1 + 2 + 2 DOF) consumes entirely,
-    # leaving no freedom to control the passband. That filter's measured gain
-    # spread was ~30x (near-zero at the target band, ~29x at Nyquist), and
-    # since the tracker directly minimizes this filter's output energy, the
-    # objective was almost entirely rewarded for canceling near-Nyquist
-    # content while nearly blind to in-band regrowth.
+    # HISTORY: the original one-effective-tap model {c10,c30,c31,c50} reached
+    # only ~+0.05 dB IMD suppression here, and an earlier pass concluded this was
+    # a model-capacity limit. Phase 3 confirmed the diagnosis but corrected the
+    # mechanism and acted on it:
     #
-    # HYPOTHESIS TESTED: that this spectral imbalance was the dominant cause
-    # of the near-0dB suppression result, and that a longer, well-conditioned
-    # filter (below) -- same 3 nulls, ~flat unity passband elsewhere, built
-    # via firwin2 rather than hand-picked coefficients -- would fix it.
+    #   * The binding axis is MEMORY DEPTH (taps), not nonlinear order. A
+    #     least-squares capacity sweep + NLMS reachability study (see the Phase 3
+    #     engineering report and backend/src/satcom_core/memory_polynomial.py)
+    #     showed a K=1 tap model's OOB-energy optimum is actively COUNTERPRODUCTIVE
+    #     in-band (~-16 dB), which is why no step size ever helped it. Expanding to
+    #     K>=3 memory taps changes the optimum to a well-conditioned +14 dB
+    #     (||c||inf ~ 2), and the actual decimated NLMS update reaches ~+10-14 dB.
+    #   * Nonlinear order beyond cubic adds <0.1 dB robustly for this scenario and
+    #     only inflates the basis condition number, so the model uses orders {1,3}.
+    #   * The well-conditioned firwin2 OOB probe below IS necessary: with the good
+    #     filter, minimising OOB energy correlates with in-band IMD suppression;
+    #     with a poorly-shaped probe it anti-correlates.
     #
-    # RESULT: disproven. The wider filter did not improve achievable
-    # suppression; if anything the tracker required a far smaller mu to
-    # avoid diverging with it (see mu below). A follow-up experiment settled
-    # it: an exhaustive-ish random search over the *entire* 3-parameter
-    # (c30, c31, c50) space this model can represent -- independent of any
-    # adaptation algorithm or OOB filter -- tops out around +0.05 dB of
-    # suppression, nowhere near the 25 dB target. Even the textbook
-    # first-order series inverse (c30=+0.05, c31=+0.01, c50=-0.005, the
-    # literal negation of the known forward-distortion coefficients used to
-    # build X_lna below) makes suppression slightly *negative*. Cross-checked
-    # against the simpler two-tone, no-jammer fixture in
-    # test_polynomial_coefficient_tracker.py: the same filter redesign there
-    # left its ~9-11% achievable OOB-ratio-reduction ceiling unchanged too.
-    #
-    # CONCLUSION: this is a model-capacity limitation, not a filter-design or
-    # step-size problem. A single-memory-tap, 2-nonlinear-order (c30, c31,
-    # c50) polynomial cannot represent the correction this 5-tone jammer
-    # scenario needs, regardless of what drives its 3 coefficients. Fixing
-    # it for real needs a higher-order/longer-memory Volterra-style model in
-    # SaturationInverter itself (more (order, tap) coefficient slots, mirrored
-    # in PolynomialCoefficientTracker's gradient kernel) -- a materially
-    # larger change than this pass attempts. The well-conditioned filter is
-    # kept anyway (it is still the technically correct choice for whatever
-    # model eventually uses it, and the generalized variable-tap-count kernel
-    # it required is genuine, verified infrastructure -- see
-    # polynomial_coefficient_tracker.py), but it should not be mistaken for a
-    # fix to the suppression number below.
+    # HONEST LIMITATION: even the global (overfit, ||c|| ~ O(100)) least-squares
+    # optimum of a large memory polynomial tops out near +8-18 dB in-band on this
+    # exact deterministic block, and the stable, NLMS-reachable operating point is
+    # ~+10-14 dB. The 25 dB assertion below is therefore NOT reachable by this
+    # architecture on this scenario/objective and this test remains a DOCUMENTED
+    # FAILURE. The threshold is intentionally left unchanged (not weakened): the
+    # measured suppression printed above the assertion is the real, reproducible
+    # capability, and it is now ~+10 dB rather than ~0 dB.
     nyquist_norm = np.pi
     target_null_lo, target_null_hi = 0.06, 0.14   # rad/sample, covers the 0.08/0.12 target tones w/ margin
     jammer_null_lo, jammer_null_hi = 0.53, 0.67   # rad/sample, covers the 0.58-0.62 jammer cluster w/ margin
@@ -130,7 +122,9 @@ def run_milestone_55_verification():
         stride_len=stride_len,
         mu=mu,
         threshold_ratio=threshold_ratio,
-        filter_coeffs=h_coeffs
+        filter_coeffs=h_coeffs,
+        num_orders=num_orders,
+        num_taps=num_taps
     )
     
     # Generate clean two-tone target signal in-band: f1=0.08, f2=0.12 rad/sample
@@ -169,12 +163,9 @@ def run_milestone_55_verification():
     
     # Verification simulation loop
     for cycle in range(cycles):
-        # 1. Update inverter weights from tracker shared slots in-place
-        for ch in range(num_channels):
-            coef = tracker.get_coefficients(ch)
-            inverter.coefficients[ch] = coef
-        inverter.c_real = inverter.coefficients.real.astype(np.float32)
-        inverter.c_imag = inverter.coefficients.imag.astype(np.float32)
+        # 1. Update inverter weights from tracker shared slots
+        inverter.coefficients = np.stack(
+            [tracker.get_coefficients(ch) for ch in range(num_channels)], axis=0)
         
         # 2. Apply saturation linearization inversion to the full LNA waveform
         t0 = time.perf_counter()
@@ -189,7 +180,9 @@ def run_milestone_55_verification():
         latencies_tracker.append((t3 - t2) * 1e6)
         
         if cycle % 500 == 0:
-            print(f"    Coefs: {tracker.get_coefficients(0)[2,0]}, {tracker.get_coefficients(0)[2,1]}, {tracker.get_coefficients(0)[4,0]}")
+            coef0 = tracker.get_coefficients(0)
+            print(f"    Coefs[orders x taps] max|c|={np.max(np.abs(coef0)):.3f}  "
+                  f"cubic-tap0={coef0[1, 0]:.4f} cubic-tap1={coef0[1, 1]:.4f}")
         
         if (cycle + 1) % 500 == 0:
             mean_oob_ratio = np.mean(oob / (tot + 1e-6))

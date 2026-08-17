@@ -23,6 +23,7 @@ sys.path.insert(0, BACKEND_SRC)
 
 try:
     from saturation_inverter import SaturationInverter
+    import memory_polynomial as mp
 except ImportError as e:
     print(f"CRITICAL ERROR: Failed to link SpaceShield modules. {e}")
     sys.exit(1)
@@ -30,32 +31,26 @@ except ImportError as e:
 
 def numpy_reference_linearizer(X: np.ndarray, coefficients: np.ndarray) -> np.ndarray:
     """
-    Direct NumPy evaluation of the 4-term Memory Polynomial:
-    y(n) = c_1_0 * x(n) + c_3_0 * x(n)*|x(n)|^2 + c_3_1 * x(n-1)*|x(n-1)|^2 + c_5_0 * x(n)*|x(n)|^4
-    Used to mathematically verify the JIT kernel.
+    Direct NumPy evaluation of the configurable memory polynomial
+        y[n] = sum_{p,k} c[p,k] * x[n-k] * |x[n-k]|^(2p)
+    (shared single source of truth in memory_polynomial.evaluate). Used to
+    mathematically verify the JIT kernel for any (num_orders, num_taps).
     """
+    return mp.evaluate(X, coefficients)
+
+
+def legacy_sparse_reference(X: np.ndarray, c10, c30, c31, c50) -> np.ndarray:
+    """The PREVIOUS fixed 4-term model, hand-written, for the bit-exact regression."""
     num_channels, stride_len = X.shape
     Y = np.zeros_like(X, dtype=np.complex64)
-    
     for ch in range(num_channels):
-        c10 = coefficients[ch, 0, 0]
-        c30 = coefficients[ch, 2, 0]
-        c31 = coefficients[ch, 2, 1]
-        c50 = coefficients[ch, 4, 0]
-        
         for n in range(stride_len):
-            xn = X[ch, n]
-            a0 = abs(xn)
-            term0 = xn * (c10 + c30 * (a0**2) + c50 * (a0**4))
-            
+            xn = X[ch, n]; a0 = abs(xn)
+            term0 = xn * (c10 + c30 * (a0 ** 2) + c50 * (a0 ** 4))
             if n > 0:
-                xn_1 = X[ch, n - 1]
-                a1 = abs(xn_1)
-                term1 = xn_1 * (c31 * (a1**2))
-                Y[ch, n] = term0 + term1
-            else:
-                Y[ch, n] = term0
-                
+                xn_1 = X[ch, n - 1]; a1 = abs(xn_1)
+                term0 = term0 + xn_1 * (c31 * (a1 ** 2))
+            Y[ch, n] = term0
     return Y
 
 
@@ -67,31 +62,44 @@ def run_saturation_inverter_tests():
     num_channels = 4
     stride_len = 4096
     
-    # 1. Mathematical Correctness vs NumPy Reference
+    # 1. Mathematical Correctness vs NumPy Reference (configurable orders x taps)
     print("[1] Verifying mathematical correctness against NumPy reference...")
     rng = np.random.default_rng(42)
-    
-    # Generate random input signal and random coefficients
-    X_test = (rng.normal(0, 1.0, (num_channels, stride_len)) + 1j * rng.normal(0, 1.0, (num_channels, stride_len))).astype(np.complex64)
-    coef_test = (rng.normal(0, 0.1, (num_channels, 5, 2)) + 1j * rng.normal(0, 0.1, (num_channels, 5, 2))).astype(np.complex64)
-    
-    # Instantiate inverter
-    inverter = SaturationInverter(channels=num_channels, stride_len=stride_len, coefficients=coef_test)
-    
-    # Run JIT implementation
-    Y_jit = inverter.linearize_stride(X_test).copy()
-    
-    # Run Reference implementation
-    Y_ref = numpy_reference_linearizer(X_test, coef_test)
-    
-    max_err = np.max(np.abs(Y_jit - Y_ref))
-    print(f"    -> Maximum observed difference vs NumPy: {max_err:.6e}")
-    
+
+    max_err = 0.0
+    for (num_orders, num_taps) in [(2, 3), (3, 2), (1, 4), (3, 3), (2, 1)]:
+        X_test = (rng.normal(0, 0.5, (num_channels, stride_len))
+                  + 1j * rng.normal(0, 0.5, (num_channels, stride_len))).astype(np.complex64)
+        coef_test = (rng.normal(0, 0.1, (num_channels, num_orders, num_taps))
+                     + 1j * rng.normal(0, 0.1, (num_channels, num_orders, num_taps))).astype(np.complex64)
+        inverter = SaturationInverter(channels=num_channels, stride_len=stride_len, coefficients=coef_test)
+        Y_jit = inverter.linearize_stride(X_test).copy()
+        Y_ref = numpy_reference_linearizer(X_test, coef_test)
+        e = np.max(np.abs(Y_jit - Y_ref))
+        max_err = max(max_err, e)
+        print(f"    -> orders={num_orders} taps={num_taps}: max|JIT-ref| = {e:.6e}")
+
     correctness_passed = max_err < 1e-3
     if correctness_passed:
-        print("    [PASS] JIT kernel output matches NumPy reference.")
+        print("    [PASS] JIT kernel output matches NumPy reference across (orders, taps).")
     else:
         print("    [FAIL] Mathematical mismatch in JIT-compiled kernel.")
+
+    # 1b. Legacy bit-exact regression: the previous fixed {c10,c30,c31,c50} model
+    # is exactly the dense (orders=3, taps=2) grid with the other slots zeroed.
+    print("\n[1b] Verifying bit-exact reproduction of the previous 4-term model...")
+    X_leg = (rng.normal(0, 1.0, (num_channels, stride_len))
+             + 1j * rng.normal(0, 1.0, (num_channels, stride_len))).astype(np.complex64)
+    c10, c30, c31, c50 = 1.0 + 0j, -0.05 + 0.01j, -0.01 - 0.02j, 0.005 + 0j
+    C_dense = np.zeros((num_channels, 3, 2), dtype=np.complex64)
+    C_dense[:, 0, 0] = c10; C_dense[:, 1, 0] = c30; C_dense[:, 1, 1] = c31; C_dense[:, 2, 0] = c50
+    Y_dense = SaturationInverter(channels=num_channels, stride_len=stride_len,
+                                 coefficients=C_dense).linearize_stride(X_leg).copy()
+    Y_legacy = legacy_sparse_reference(X_leg, c10, c30, c31, c50)
+    legacy_err = np.max(np.abs(Y_dense - Y_legacy))
+    legacy_passed = legacy_err < 1e-3
+    print(f"    -> max|dense - legacy| = {legacy_err:.6e}  "
+          f"[{'PASS' if legacy_passed else 'FAIL'}] (expanded model is a strict superset)")
         
     # 2. Dynamic Range Expansion & Peak Reconstruction
     print("\n[2] Verifying peak reconstruction & linearization...")
@@ -111,30 +119,24 @@ def run_saturation_inverter_tests():
                 val -= 0.05 * s_clean[ch, n - 1] * (abs(s_clean[ch, n - 1])**2)
             x_distorted[ch, n] = val
             
-    # Solve linear least squares to calibrate the inverse coefficients
-    coef_calibrated = np.zeros((num_channels, 5, 2), dtype=np.complex64)
+    # Solve linear least squares to calibrate the inverse coefficients over the
+    # dense memory-polynomial basis (orders=3 -> {|x|^0,|x|^2,|x|^4}, taps=2).
+    # c[0,0] (linear/current tap) is anchored to 1.0; the remaining slots are fit.
+    num_orders, num_taps = 3, 2
+    coef_calibrated = np.zeros((num_channels, num_orders, num_taps), dtype=np.complex64)
+    slots = [(p, k) for p in range(num_orders) for k in range(num_taps) if not (p == 0 and k == 0)]
     for ch in range(num_channels):
-        # We only fit the 3 adaptive coefficients: c_3_0, c_3_1, c_5_0.
-        # Target is s_clean[ch, 1:] - x_distorted[ch, 1:] (since c_1_0 is anchored to 1.0)
-        A = np.zeros((stride_len - 1, 3), dtype=np.complex64)
-        for n in range(1, stride_len):
-            xn = x_distorted[ch, n]
-            xn_1 = x_distorted[ch, n - 1]
-            a0 = abs(xn)
-            a1 = abs(xn_1)
-            
-            A[n - 1, 0] = xn * (a0**2)
-            A[n - 1, 1] = xn_1 * (a1**2)
-            A[n - 1, 2] = xn * (a0**4)
-            
-        b = s_clean[ch, 1:] - x_distorted[ch, 1:]
+        cols = []
+        for (p, k) in slots:
+            cols.append(mp.basis_regressor(x_distorted[ch], p, k))
+        A = np.stack(cols, axis=1).astype(np.complex128)
+        anchor = mp.basis_regressor(x_distorted[ch], 0, 0)   # c[0,0]=1 * x
+        b = (s_clean[ch] - anchor).astype(np.complex128)
         c_fit, _, _, _ = np.linalg.lstsq(A, b, rcond=None)
-        
-        # Map back to coefficients structure:
+
         coef_calibrated[ch, 0, 0] = 1.0  # anchored
-        coef_calibrated[ch, 2, 0] = c_fit[0]
-        coef_calibrated[ch, 2, 1] = c_fit[1]
-        coef_calibrated[ch, 4, 0] = c_fit[2]
+        for (p, k), val in zip(slots, c_fit):
+            coef_calibrated[ch, p, k] = val
         
     # Instantiate calibrated inverter
     calib_inverter = SaturationInverter(channels=num_channels, stride_len=stride_len, coefficients=coef_calibrated)
@@ -181,6 +183,7 @@ def run_saturation_inverter_tests():
         print("    [FAIL] Latency ceiling breached significantly.")
         
     assert correctness_passed, "Correctness check failed!"
+    assert legacy_passed, "Legacy 4-term bit-exact regression failed!"
     assert reconstruction_passed, "Reconstruction check failed!"
     assert latency_passed, "Latency check failed!"
     
