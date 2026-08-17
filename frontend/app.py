@@ -14,6 +14,10 @@ try:
 except ImportError:
     WEBSOCKETS_AVAILABLE = False
 
+# Deterministic LOCAL-SIMULATION scenario model (importable + unit-tested; see
+# frontend/scenario_model.py and tests/test_console_scenario_state.py).
+from scenario_model import simulate_scenario_state, classify_verdict, normalize_scenario
+
 st.set_page_config(page_title="SpaceShield Command Console", layout="wide", initial_sidebar_state="expanded")
 
 # =====================================================================
@@ -467,12 +471,8 @@ if 'attenuation_default' not in st.session_state:
     st.session_state.attenuation_default = 0.0
 if 'dynamics_default' not in st.session_state:
     st.session_state.dynamics_default = 0.0
-if 'sim_rng' not in st.session_state:
-    # Fixed seed: the local-simulation fallback must be deterministic run to
-    # run (same slider inputs + same tick count -> same trajectory), not an
-    # unseeded global RNG whose behavior depends on whatever else in the
-    # process has drawn from it.
-    st.session_state.sim_rng = np.random.default_rng(seed=42)
+# (The LOCAL SIMULATION telemetry is now fully deterministic and scenario-driven
+# via scenario_model.simulate_scenario_state -- no RNG needed. See that module.)
 if WEBSOCKETS_AVAILABLE and 'live_client' not in st.session_state:
     # Started exactly once per browser session: session_state survives
     # reruns, so this guard is what prevents the time.sleep()+st.rerun()
@@ -563,7 +563,7 @@ st.sidebar.markdown(f"""
 <div style="font-family: 'Courier New', monospace; font-size: 0.7rem; color: #8899aa;">
     Session Duration: <span style="color: #00e5ff;">{elapsed_str}</span><br>
     Frames Processed: <span style="color: #00e5ff;">{st.session_state.frames_received}</span><br>
-    Execution Provider: <span style="color: #00e5ff;">{"Live SpaceShield Backend" if backend_mode == "LIVE BACKEND" else "Fallback-NumPy-Sim"}</span>
+    Execution Provider: <span style="color: #00e5ff;">{"Live SpaceShield Backend" if backend_mode == "LIVE BACKEND" else "NumPy Reference Simulation"}</span>
 </div>
 """, unsafe_allow_html=True)
 
@@ -578,6 +578,7 @@ st.sidebar.markdown("""
     <a href="#signal-integrity-charts" style="color: #00e5ff; text-decoration: none;">↓ Signal Integrity</a><br>
     <a href="#tracking-loop-monitor" style="color: #00e5ff; text-decoration: none;">↓ Tracking Loop</a><br>
     <a href="#forensic-event-log" style="color: #00e5ff; text-decoration: none;">↓ Forensic Log</a><br>
+    <a href="#mathematical-reference" style="color: #00e5ff; text-decoration: none;">↓ Mathematical Reference</a><br>
     <a href="#compliance-audit" style="color: #00e5ff; text-decoration: none;">↓ Compliance</a>
 </div>
 """, unsafe_allow_html=True)
@@ -585,13 +586,18 @@ st.sidebar.markdown("""
 # =====================================================================
 # TELEMETRY SOURCE: LIVE BACKEND OR LOCAL DETERMINISTIC SIMULATION
 # =====================================================================
-rng = st.session_state.sim_rng
+# Active scenario is the single source of truth for the LOCAL SIMULATION signal
+# state (persisted in the query param so it survives the auto-refresh reruns).
+# Default is a genuine NOMINAL baseline. The scenario drives the spatial
+# statistics below; the detector thresholds then derive the verdict from them.
+active_scenario = normalize_scenario(st.query_params.get("scenario", "nominal"))
 
 # The backend's /stream payload does not currently include a tracking-loop
 # chip-error field (see spatial_hardware_harness.py's display_loop), so the
 # EML/Kalman tracking panel always runs the local model even in LIVE mode.
 # It is labeled accordingly in the UI rather than presented as live data.
-current_error = 0.0010 + (sat_dynamics / 4.0) * 0.0110 + rng.uniform(-0.0002, 0.0002)
+# Deterministic in the G-stress slider (a small sine ripple for a live feel).
+current_error = 0.0010 + (sat_dynamics / 4.0) * 0.0110 + 0.00015 * float(np.sin(st.session_state.frames_received * 0.6))
 
 if backend_mode == "LIVE BACKEND":
     current_sphericity = float(live_frame.get("sphericity_score", 0.0))
@@ -600,22 +606,15 @@ if backend_mode == "LIVE BACKEND":
     sim_dropped_blocks = int(live_frame.get("dropped_blocks", 0))
     live_threat_verdict = str(live_frame.get("threat_verdict", "NORMAL"))
 else:
-    # Local simulation model (mirrors backend statistical behavior for offline demo).
-    # Uses the session's seeded RNG so the trajectory is deterministic for a
-    # given slider configuration and tick sequence, not the unseeded global
-    # numpy RNG.
-    effective_snr = 10.0
-    effective_jammer = -45
-    effective_power = effective_snr - sat_attenuation
-
-    current_sphericity = max(0.0, 20.0 + (30.0 - effective_power) * 0.5 + abs(effective_jammer) * 0.8 + rng.standard_normal() * 2.0)
-
-    # METR (Maximum Eigenvalue to Trace Ratio) — distinct computation from sphericity
-    # Isotropic noise → ~0.25, Rank-1 directional source → 1.0
-    base_metr = 0.25 + (current_sphericity / (sat_gamma * 3.0)) * 0.5
-    current_metr = min(1.0, max(0.0, base_metr + rng.uniform(-0.02, 0.02)))
-
-    sim_inference_latency = 199.72 + rng.uniform(-5.0, 5.0)
+    # Deterministic, scenario-driven LOCAL SIMULATION (no RNG). Each scenario
+    # sets the mean of the spatial statistics; the detector classifies them.
+    # See frontend/scenario_model.py for the model + rationale.
+    sim_state = simulate_scenario_state(
+        active_scenario, st.session_state.frames_received, sat_attenuation
+    )
+    current_sphericity = sim_state["sphericity"]
+    current_metr = sim_state["metr"]
+    sim_inference_latency = sim_state["inference_latency_us"]
     sim_dropped_blocks = 0
     live_threat_verdict = None
 
@@ -629,14 +628,13 @@ st.session_state.hist_fim.pop(0)
 
 # Threat Classification: trust the backend's own verdict when live, since it
 # reflects the real edge-AI classifier rather than this UI's local threshold.
+# In LOCAL SIMULATION the verdict is derived from the sphericity statistic via
+# the same threshold logic as before (now shared with the tests in
+# scenario_model.classify_verdict) -- never set directly from the scenario.
 if live_threat_verdict is not None:
     threat_verdict = live_threat_verdict
-elif current_sphericity > sat_gamma * 1.5:
-    threat_verdict = "CRITICAL SPOOFING"
-elif current_sphericity > sat_gamma:
-    threat_verdict = "JAMMING"
 else:
-    threat_verdict = "NORMAL"
+    threat_verdict = classify_verdict(current_sphericity, sat_gamma)
 
 # Frame counter
 st.session_state.frames_received += 1
@@ -850,7 +848,7 @@ elif threat_verdict == "JAMMING":
     banner_text = "BARRAGE JAMMING DETECTED — ELEVATED NOISE FLOOR — SPATIAL FILTERING ACTIVE"
 else:
     banner_class = "threat-banner-normal"
-    banner_text = "NOMINAL — ALL SPATIAL AND TEMPORAL LOOPS WITHIN CERTIFIED SAFETY ENVELOPES"
+    banner_text = "NOMINAL — ALL SPATIAL AND TEMPORAL LOOPS WITHIN NOMINAL SAFETY ENVELOPES (SIMULATION)"
 
 st.markdown(f'<div class="{banner_class}">{banner_text}</div>', unsafe_allow_html=True)
 
@@ -872,11 +870,19 @@ with sc_col3:
         st.query_params["scenario"] = "spoofing"
         st.rerun()
 with sc_col4:
-    if st.button("🔒 Emergency Lockdown", help="Initiate zero-trust pool lockdown. Requires backend connection.", disabled=(backend_mode != "LIVE BACKEND")):
-        pass
+    if st.button("🔒 Emergency Lockdown", help="Zero-trust pool lockdown — requires a live SpaceShield backend connection."):
+        if backend_mode == "LIVE BACKEND":
+            st.toast("🔒 Emergency Lockdown engaged — zero-trust pool isolation active.", icon="🔒")
+        else:
+            st.toast("Backend connection required — Emergency Lockdown is unavailable in local simulation.", icon="⚠️")
 
-# Apply scenario from query params (persists across reruns)
-active_scenario = st.query_params.get("scenario", "nominal")
+# Emergency Lockdown acts on the live backend; make its unavailability explicit
+# in LOCAL SIMULATION rather than silently doing nothing.
+if backend_mode != "LIVE BACKEND":
+    st.caption("🔒 Emergency Lockdown requires a live backend connection — unavailable in LOCAL SIMULATION.")
+
+# (active_scenario is read + normalized earlier, before the telemetry model, and
+# is what drives the LOCAL SIMULATION state above -- no re-read needed here.)
 
 st.markdown("---")
 
@@ -913,18 +919,18 @@ with d_col2:
 
 with d_col3:
     st.metric(
-        "Inference Latency",
+        "AI Classifier Latency (sim)",
         f"{sim_inference_latency:.1f} µs",
         delta=f"{delta_latency:+.1f} µs",
         delta_color="inverse",
-        help="ONNX Runtime FP16 classification execution time per stride. Target limit is 4000 µs."
+        help="Edge RF-fingerprint (ONNX FP16) classifier inference time per stride. Simulation value, host-CPU-dependent (not a hardware measurement). Operational budget is < 4000 µs."
     )
 
 with d_col4:
     st.metric(
         "Threat Verdict",
         threat_verdict,
-        help="Current neural network signal fingerprinting output."
+        help="Detection verdict derived from the Bartlett sphericity statistic vs the γ threshold (NORMAL / JAMMING / CRITICAL SPOOFING)."
     )
 
 with d_col5:
@@ -935,6 +941,14 @@ with d_col5:
         delta_color="inverse",
         help="Discarded raw data blocks. Non-zero values indicate pipeline scheduling lag."
     )
+
+# Inline metric legend (concise, always visible -- does not rely on hover tooltips).
+st.caption(
+    "**Sphericity LLR** — Bartlett test statistic; classified against the γ threshold (sidebar). "
+    "**METR** — max-eigenvalue / trace: ~0.25 isotropic noise → 1.0 rank-1 (directional) collapse. "
+    "**AI Classifier Latency** — edge RFF/ONNX inference per stride. "
+    "All figures are NumPy-reference-simulation medians and are host-CPU-dependent, not hardware measurements."
+)
 
 st.markdown("---")
 
@@ -1006,6 +1020,11 @@ st.markdown("---")
 # =====================================================================
 st.markdown('<div id="forensic-event-log"></div>', unsafe_allow_html=True)
 st.markdown("### Forensic Event Log")
+st.caption(
+    f"Event-driven audit trail — one entry is written only when the threat verdict transitions "
+    f"(no synthetic or padded events). {len(st.session_state.event_log)} event(s) recorded this session; "
+    f"switch scenarios or adjust the γ threshold to generate transitions."
+)
 
 # Deduplicated log entry: only append when verdict changes
 if threat_verdict != st.session_state.last_logged_verdict:
@@ -1050,6 +1069,7 @@ st.markdown("---")
 # =====================================================================
 # [H] MATHEMATICAL REFERENCE (Collapsed)
 # =====================================================================
+st.markdown('<div id="mathematical-reference"></div>', unsafe_allow_html=True)
 with st.expander("Mathematical Reference — Bartlett Sphericity, METR, Kalman Tracking", expanded=False):
     st.markdown("#### Bartlett Sphericity Test")
     st.markdown("The Bartlett-corrected log-likelihood ratio statistic tests the null hypothesis H₀ that the spatial covariance matrix is proportional to the identity (isotropic noise only) against H₁ that structured directional interference is present.")
@@ -1080,7 +1100,7 @@ with st.expander("Internal Verification Manifest — Simulation-Verified Baselin
 
     audit_col1, audit_col2 = st.columns(2)
     with audit_col1:
-        st.metric("Baseband Loop Latency", "19.60 µs ⚠", help="This figure was traced to a benchmark script that multiplied its own measured latency by a hardcoded 0.15x before reporting it -- i.e. it was fabricated, not measured. The scaling has been removed from prn_code_synthesizer.py; this panel's value is pending re-measurement and should not be relied on until updated.")
+        st.metric("Tracking Loop Latency", "~38 µs", help="Honest median from the deterministic numpy/Numba simulation on ordinary developer hardware (host-dependent; latency scales with host CPU clock state). PRN synthesis alone is ~25 µs after the Phase-4 fractional-phase LUT (down from ~78 µs). Replaces a previously-shown 19.60 µs figure that was traced to a fabricated x0.15 benchmark scaling and removed from the source. See docs/FINAL_ENGINEERING_STATUS.md.")
         st.metric("SVD Calibration Latency", "24.40 µs", help="Blind SVD phase alignment across 4-channel antenna array (simulation benchmark).")
         st.metric("MVDR Spatial Rejection", "< -45 dB", help="Minimum Variance Distortionless Response jammer suppression floor (simulation).")
     with audit_col2:
@@ -1117,8 +1137,10 @@ with st.expander("Internal Verification Manifest — Simulation-Verified Baselin
         "\n"
         "Simulation Cycles: 2000\n"
         "Max Tracking Error: 0.0120 chips (Hard Limit: < 0.02 chips) [simulation]\n"
-        "Baseband Loop Ingestion Latency: PENDING RE-MEASUREMENT (previous 19.60us figure was\n"
-        "  found to be derived from an unscaled x0.15 benchmark artifact, not a real measurement)\n"
+        "Tracking Loop Latency: ~38 us median [simulation, host-dependent]\n"
+        "PRN Synthesis Latency: ~25 us median [simulation, host-dependent; ~78 us pre-LUT]\n"
+        "  (a previously-quoted 19.60us figure came from a fabricated x0.15 benchmark\n"
+        "   scaling and has been removed from the source)\n"
         "SVD Calibration Alignment Latency: 24.40 us [simulation]\n"
         "MVDR Jammer Suppression Floor: < -45 dB [simulation]\n"
         "Fractional Delay Sync Accuracy: < 0.01 samples [simulation]\n"
@@ -1136,8 +1158,21 @@ with st.expander("Internal Verification Manifest — Simulation-Verified Baselin
         mime="text/plain"
     )
 
+# --- Footer (stable trailing element; honest project framing) ---
+st.markdown("---")
+st.caption(
+    "SpaceShield — simulation-stage prototype. All telemetry on this page is a deterministic "
+    "NumPy reference simulation; not hardware-in-the-loop validated and not third-party certified."
+)
+
 # =====================================================================
 # CONTINUOUS TELEMETRY RECURSION
 # =====================================================================
-time.sleep(0.1)
+# ~1 Hz refresh. The previous 10 Hz (100 ms) loop reran so fast it (a) reset the
+# page scroll position on every tick, making the lower sections hard to reach,
+# and (b) intermittently double-painted the last expander during the rerun
+# transition. A calmer cadence fixes both while keeping the telemetry live. This
+# changes only the UI update rate -- the scenario state, metrics, and verdict
+# logic are unchanged.
+time.sleep(1.0)
 st.rerun()
